@@ -1,16 +1,14 @@
-function analyze_ymaze(csv_filename)
-% FUNCTION analyze_ymaze(csv_filename)
+function analyze_ymaze(h5_filename)
+% FUNCTION analyze_ymaze(h5_filename)
 %
-% analyzes csv files output from deeplabcut tracking of Y-maze videos using 
+% analyzes h5 files output from deeplabcut tracking of Y-maze videos using 
 % the "Ymaze_2" training dataset. Analysis includes plotting the summary of 
 % mouse and ymaze tracking data, calculating time the mouse spent within 
 % each arm, the sequence of arm entries, and the spontaneous alternation %
 %
 %INPUTS
-%csv_filename: full path/filename of a csv file to analyze
+%h5_filename: full path/filename of a h5 file to analyze
 
-[save_dir, filename, ~] = fileparts(csv_filename);
-output_filename = fullfile(save_dir,filename);
 fps = 30;
 arm_length_in_meters = 0.365;
 armnotch_length = 0.0762;
@@ -19,26 +17,31 @@ figure_size = [10 10 25 10];
 insidearm_threshold_fraction = (arm_length_in_meters-armnotch_length)/arm_length_in_meters; %how close to the center a mouse can be and still be identified as in an arm
 
 %load tracking data
-opts = detectImportOptions(csv_filename);
-opts.VariableNamesLine = 2;
-tbl = readtable(csv_filename, opts);
-colnames = tbl.Properties.VariableNames;
-ary = table2array(tbl);
+[save_dir, filename, ~] = fileparts(h5_filename);
+ind = strfind(filename,'DLC_mobnet');
+filename = filename(1:ind-1);
+output_filename = fullfile(save_dir,filename);
+
+data = h5read(h5_filename,'/df_with_missing/table');
+ary = data.values_block_0';
+%columns: top-right, top-left, bottom-left, bottome-right, right-ear, left-ear, nose, tail-base; each have 3 rows, for [x, y, likelihood]
+colnames = {'RA_x','RA_y','RA_l','LA_x','LA_y','LA_l','BA_x','BA_y','BA_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
 
 %vertically flip all y values
-ystrings = repmat({'_1'},1,num_cols);
+ystrings = repmat({'_y'},1,num_cols);
 col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
 col_is_y = find(~cellfun(@isempty,col_is_y));
 ary(:,col_is_y) = 1080-ary(:,col_is_y);
 
+
 %% calculate arm end locations
-arm1_x_ind = find(strcmp(colnames,'leftarm'));
-arm1_y_ind = find(strcmp(colnames,'leftarm_1'));
-arm2_x_ind = find(strcmp(colnames,'rightarm'));
-arm2_y_ind = find(strcmp(colnames,'rightarm_1'));
-arm3_x_ind = find(strcmp(colnames,'botarm'));
-arm3_y_ind = find(strcmp(colnames,'botarm_1'));
+arm1_x_ind = find(strcmp(colnames,'LA_x'));
+arm1_y_ind = find(strcmp(colnames,'LA_y'));
+arm2_x_ind = find(strcmp(colnames,'RA_x'));
+arm2_y_ind = find(strcmp(colnames,'RA_y'));
+arm3_x_ind = find(strcmp(colnames,'BA_x'));
+arm3_y_ind = find(strcmp(colnames,'BA_y'));
 arms_x = [ary(:,arm1_x_ind);ary(:,arm2_x_ind);ary(:,arm3_x_ind)];
 arms_y = [ary(:,arm1_y_ind);ary(:,arm2_y_ind);ary(:,arm3_y_ind)];
 
@@ -106,14 +109,14 @@ ylim([-280 1370])
 title('ymaze area');
 
 %% delete all mouse tracking that's too far from the ymaze (change to NaNs)
-nose_x_ind = find(strcmp(colnames,'nose'));
-nose_y_ind = find(strcmp(colnames,'nose_1'));
-leftear_x_ind = find(strcmp(colnames,'leftear'));
-leftear_y_ind = find(strcmp(colnames,'leftear_1'));
-rightear_x_ind = find(strcmp(colnames,'rightear'));
-rightear_y_ind = find(strcmp(colnames,'rightear_1'));
-tail_x_ind = find(strcmp(colnames,'tailbase'));
-tail_y_ind = find(strcmp(colnames,'tailbase_1'));
+leftear_x_ind = find(strcmp(colnames,'LE_x'));
+leftear_y_ind = find(strcmp(colnames,'LE_y'));
+rightear_x_ind = find(strcmp(colnames,'RE_x'));
+rightear_y_ind = find(strcmp(colnames,'RE_y'));
+nose_x_ind = find(strcmp(colnames,'NO_x'));
+nose_y_ind = find(strcmp(colnames,'NO_y'));
+tail_x_ind = find(strcmp(colnames,'TB_x'));
+tail_y_ind = find(strcmp(colnames,'TB_y'));
 
 nose_x = ary(:,nose_x_ind);
 nose_y = ary(:,nose_y_ind);

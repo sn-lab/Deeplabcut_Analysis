@@ -1,45 +1,47 @@
-% function analyze_openfield(csv_filename)
-% FUNCTION analyze_openfield(csv_filename)
+function analyze_openfield(h5_filename)
+% FUNCTION analyze_openfield(h5_filename)
 %
-% analyzes csv files output from deeplabcut tracking of open field (aka
+% analyzes h5 files output from deeplabcut tracking of open field (aka
 % "red box") videos using the "Redbox_2" training dataset. Analysis includes
 % plotting the summary of mouse and box tracking data, and calculating the 
 % mouse's time and travel distance near walls and in the box center
 %
 %INPUTS
-%csv_filename: full path/filename of a csv file to analyze
-csv_filename = 'C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\examples\wt1DLC_mobnet_100_Redbox_2Oct13shuffle1_10000.csv';
+%h5_filename: full path/filename of a h5 file to analyze
 
-[save_dir, filename, ~] = fileparts(csv_filename);
-output_filename = fullfile(save_dir,filename);
+%set parameters
 fps = 30;
 nearedge_threshold = .10; %how close to the edge (in m) a mouse has to be to be call "near"
 box_length_in_meters = 0.4445;
 figure_size = [10 10 25 10];
 
 %load tracking data
-opts = detectImportOptions(csv_filename);
-opts.VariableNamesLine = 2;
-tbl = readtable(csv_filename, opts);
-colnames = tbl.Properties.VariableNames;
-ary = table2array(tbl);
+[save_dir, filename, ~] = fileparts(h5_filename);
+ind = strfind(filename,'DLC_mobnet');
+filename = filename(1:ind-1);
+output_filename = fullfile(save_dir,filename);
+
+data = h5read(h5_filename,'/df_with_missing/table');
+ary = data.values_block_0';
+%columns: top-right, top-left, bottom-left, bottome-right, right-ear, left-ear, nose, tail-base; each have 3 rows, for [x, y, likelihood]
+colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x','BR_y','BR_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
 
 %vertically flip all y values
-ystrings = repmat({'_1'},1,num_cols);
+ystrings = repmat({'_y'},1,num_cols);
 col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
 col_is_y = find(~cellfun(@isempty,col_is_y));
 ary(:,col_is_y) = 1080-ary(:,col_is_y);
 
 %% calculate box corner locations
-topright_x_ind = find(strcmp(colnames,'toprightcorner'));
-topright_y_ind = find(strcmp(colnames,'toprightcorner_1'));
-topleft_x_ind = find(strcmp(colnames,'topleftcorner'));
-topleft_y_ind = find(strcmp(colnames,'topleftcorner_1'));
-botleft_x_ind = find(strcmp(colnames,'botleftcorner'));
-botleft_y_ind = find(strcmp(colnames,'botleftcorner_1'));
-botright_x_ind = find(strcmp(colnames,'botrightcorner'));
-botright_y_ind = find(strcmp(colnames,'botrightcorner_1'));
+topright_x_ind = find(strcmp(colnames,'TR_x'));
+topright_y_ind = find(strcmp(colnames,'TR_y'));
+topleft_x_ind = find(strcmp(colnames,'TL_x'));
+topleft_y_ind = find(strcmp(colnames,'TL_y'));
+botleft_x_ind = find(strcmp(colnames,'BL_x'));
+botleft_y_ind = find(strcmp(colnames,'BL_y'));
+botright_x_ind = find(strcmp(colnames,'BR_x'));
+botright_y_ind = find(strcmp(colnames,'BR_y'));
 
 topright_x = ary(:,topright_x_ind);
 topright_y = ary(:,topright_y_ind);
@@ -114,21 +116,21 @@ num_edgepts = length(edgepts_x);
 subplot(2,4,2)
 scatter(edgepts_x,edgepts_y,200,'MarkerFaceColor','flat');
 hold on
-patch([corners_x 1440 1440 0 0 1440 corners_x(1)],[corners_y 1080 0 0 1080 1080 corners_y(1)],'w','EdgeColor','None');
+patch([corners_x 1550 1550 -100 -100 1550 corners_x(1)],[corners_y 1370 -280 -280 1370 1370 corners_y(1)],'w','EdgeColor','None');
 xlim([-100 1550]);
 ylim([-280 1370])
 title('edge location');
 
 
 %% delete all mouse tracking that's outside of the box (change to NaNs)
-nose_x_ind = find(strcmp(colnames,'nose'));
-nose_y_ind = find(strcmp(colnames,'nose_1'));
-leftear_x_ind = find(strcmp(colnames,'leftear'));
-leftear_y_ind = find(strcmp(colnames,'leftear_1'));
-rightear_x_ind = find(strcmp(colnames,'rightear'));
-rightear_y_ind = find(strcmp(colnames,'rightear_1'));
-tail_x_ind = find(strcmp(colnames,'tailbase'));
-tail_y_ind = find(strcmp(colnames,'tailbase_1'));
+leftear_x_ind = find(strcmp(colnames,'LE_x'));
+leftear_y_ind = find(strcmp(colnames,'LE_y'));
+rightear_x_ind = find(strcmp(colnames,'RE_x'));
+rightear_y_ind = find(strcmp(colnames,'RE_y'));
+nose_x_ind = find(strcmp(colnames,'NO_x'));
+nose_y_ind = find(strcmp(colnames,'NO_y'));
+tail_x_ind = find(strcmp(colnames,'TB_x'));
+tail_y_ind = find(strcmp(colnames,'TB_y'));
 
 full_edgepts_x = repmat(edgepts_x,[num_frames 1]);
 full_edgepts_y = repmat(edgepts_y,[num_frames 1]);
