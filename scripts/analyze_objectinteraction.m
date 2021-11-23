@@ -30,18 +30,11 @@ figure_size = [10 10 25 10];
 ind = strfind(filename,'DLC_mobnet');
 filename = filename(1:ind-1);
 output_filename = fullfile(save_dir,filename);
-
 data = h5read(h5_filename,'/df_with_missing/table');
 ary = data.values_block_0';
-%columns: top-right, top-left, bottom-left, bottome-right, right-ear, left-ear, nose, tail-base; each have 3 rows, for [x, y, likelihood]
+%columns: top-right, top-left, bottom-left, bottom-right, right-ear, left-ear, nose, tail-base; each have 3 columns, for [x, y, likelihood]
 colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x','BR_y','BR_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
-
-%vertically flip all y values
-ystrings = repmat({'_y'},1,num_cols);
-col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
-col_is_y = find(~cellfun(@isempty,col_is_y));
-ary(:,col_is_y) = 1080-ary(:,col_is_y);
 
 %load video subset (~100 frames) for object detection
 avi_filename = [output_filename '.avi'];
@@ -72,6 +65,16 @@ end
 sample_frames = flipud(sample_frames);
 median_frame = median(sample_frames,4,'omitnan')*scale_factor;
 
+%vertically flip all y values
+ystrings = repmat({'_y'},1,num_cols);
+col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
+col_is_y = find(~cellfun(@isempty,col_is_y));
+ary(:,col_is_y) = v.height-ary(:,col_is_y);
+
+%get image/plot limits
+largest_range = max([v.width v.height]);
+xlimits = [(v.width-largest_range) (v.width+largest_range)]/2;
+ylimits = [(v.height-largest_range) (v.height+largest_range)]/2;
 
 %% calculate box corner locations
 topright_x_ind = find(strcmp(colnames,'TR_x'));
@@ -85,7 +88,7 @@ botright_y_ind = find(strcmp(colnames,'BR_y'));
 
 topright_x = ary(:,topright_x_ind);
 topright_y = ary(:,topright_y_ind);
-topright_inds = topright_x>800 & topright_x<1440 & topright_y>540 & topright_y<1080;
+topright_inds = topright_x>(v.width/2) & topright_x<v.width & topright_y>(v.height/2) & topright_y<v.height;
 topright_x = topright_x(topright_inds);
 topright_x = median(topright_x,'omitnan');
 topright_y = topright_y(topright_inds);
@@ -93,7 +96,7 @@ topright_y = median(topright_y,'omitnan');
 
 topleft_x = ary(:,topleft_x_ind);
 topleft_y = ary(:,topleft_y_ind);
-topleft_inds = topleft_x<800 & topleft_x>0 & topleft_y>540 & topleft_y<1080;
+topleft_inds = topleft_x<(v.width/2) & topleft_x>0 & topleft_y>(v.height/2) & topleft_y<v.height;
 topleft_x = topleft_x(topleft_inds);
 topleft_x = median(topleft_x,'omitnan');
 topleft_y = topleft_y(topleft_inds);
@@ -101,7 +104,7 @@ topleft_y = median(topleft_y,'omitnan');
 
 botleft_x = ary(:,botleft_x_ind);
 botleft_y = ary(:,botleft_y_ind);
-botleft_inds = botleft_x<800 & botleft_x>0 & botleft_y<540 & botleft_y>0;
+botleft_inds = botleft_x<(v.width/2) & botleft_x>0 & botleft_y<(v.height/2) & botleft_y>0;
 botleft_x = botleft_x(botleft_inds);
 botleft_x = median(botleft_x,'omitnan');
 botleft_y = botleft_y(botleft_inds);
@@ -109,7 +112,7 @@ botleft_y = median(botleft_y,'omitnan');
 
 botright_x = ary(:,botright_x_ind);
 botright_y = ary(:,botright_y_ind);
-botright_inds = botright_x>800 & botright_x<1440 & botright_y<540 & botright_y>0;
+botright_inds = botright_x>(v.width/2) & botright_x<v.width & botright_y<(v.height/2) & botright_y>0;
 botright_x = botright_x(botright_inds);
 botright_x = median(botright_x,'omitnan');
 botright_y = botright_y(botright_inds);
@@ -131,8 +134,8 @@ figure('Units','centimeters','Position',figure_size);
 ax = subplot(2,4,1);
 image(median_frame);
 set(ax,'YDir','normal');
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('median frame')
 
 %calculate some points along the box edge (for later, to track mice distance from edges)
@@ -160,7 +163,6 @@ min_object_size = 500; %in pixels
 object_filt = 20;
 
 %convert median frame to hsv (h and v may be most useful to find objects, since the background is hue-stable and not dark)
-within_box_mask = poly2mask(corners_x,corners_y,1080,1440);
 median_frame_hsv = rgb2hsv(median_frame);
 median_frame_hue = 360*median_frame_hsv(:,:,1);
 median_frame_hue(median_frame_hue>180) = median_frame_hue(median_frame_hue>180)-360; %scaled as a difference from the red hue
@@ -328,8 +330,8 @@ hold on
 for o = 1:num_objects
     plot(objects_edgepts_x(o,:),objects_edgepts_y(o,:),'Color',colors(o,:),'LineWidth',1)
     text(objects_x(o)+(1.5*objects_radius(o)),objects_y(o)+(1.5*objects_radius(o)),num2str(o),'Color',colors(o,:))
-    xlim([-100 1550]);
-    ylim([-280 1370])
+    xlim(xlimits);
+    ylim(ylimits)
     title('detected walls and object locations');
 end
 
@@ -459,15 +461,15 @@ subplot(2,4,5)
 plot(corners_x,corners_y);
 hold on
 scatter(smooth_body_x,smooth_body_y,1,[0 0 1]);%colors)
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('all mouse body positions')
 
 subplot(2,4,6)
 plot(corners_x,corners_y);
 hold on
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('first 30 s trajectory')
 plot(smooth_body_x(1:fps*30),smooth_body_y(1:fps*30),'b','LineWidth',0.5);
 

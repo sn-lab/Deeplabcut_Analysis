@@ -21,91 +21,102 @@ insidearm_threshold_fraction = (arm_length_in_meters-armnotch_length)/arm_length
 ind = strfind(filename,'DLC_mobnet');
 filename = filename(1:ind-1);
 output_filename = fullfile(save_dir,filename);
-
 data = h5read(h5_filename,'/df_with_missing/table');
 ary = data.values_block_0';
-%columns: top-right, top-left, bottom-left, bottome-right, right-ear, left-ear, nose, tail-base; each have 3 rows, for [x, y, likelihood]
-colnames = {'RA_x','RA_y','RA_l','LA_x','LA_y','LA_l','BA_x','BA_y','BA_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
+%columns: right-arm, left-arm, middle-arm, right-ear, left-ear, nose, tail-base; each have 3 columns, for [x, y, likelihood]
+colnames = {'RA_x','RA_y','RA_l','LA_x','LA_y','LA_l','MA_x','MA_y','MA_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
 
-%vertically flip all y values
+%estimate original video size
 ystrings = repmat({'_y'},1,num_cols);
 col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
 col_is_y = find(~cellfun(@isempty,col_is_y));
-ary(:,col_is_y) = 1080-ary(:,col_is_y);
+xstrings = repmat({'_x'},1,num_cols);
+col_is_x = cellfun(@strfind,colnames,xstrings,'UniformOutput',false);
+col_is_x = find(~cellfun(@isempty,col_is_x));
+arymax = max(ary,'omitnan');
+v.width = max(arymax(col_is_x),'omitnan');
+v.height = max(arymax(col_is_y),'omitnan');
 
+%vertically flip all y values
+ary(:,col_is_y) = v.height-ary(:,col_is_y);
+
+%get image/plot limits
+largest_range = max([v.width v.height]);
+xlimits = [(v.width-largest_range) (v.width+largest_range)]/2;
+ylimits = [(v.height-largest_range) (v.height+largest_range)]/2;
 
 %% calculate arm end locations
 arm1_x_ind = find(strcmp(colnames,'LA_x'));
 arm1_y_ind = find(strcmp(colnames,'LA_y'));
 arm2_x_ind = find(strcmp(colnames,'RA_x'));
 arm2_y_ind = find(strcmp(colnames,'RA_y'));
-arm3_x_ind = find(strcmp(colnames,'BA_x'));
-arm3_y_ind = find(strcmp(colnames,'BA_y'));
+arm3_x_ind = find(strcmp(colnames,'MA_x'));
+arm3_y_ind = find(strcmp(colnames,'MA_y'));
 arms_x = [ary(:,arm1_x_ind);ary(:,arm2_x_ind);ary(:,arm3_x_ind)];
 arms_y = [ary(:,arm1_y_ind);ary(:,arm2_y_ind);ary(:,arm3_y_ind)];
 
-left_inds = arms_x>25 & arms_x<275; %start with a wide search for the left arm
+left_inds = arms_x>0 & arms_x<(v.width/3); %start with a wide search for the left arm
 leftarm_x = median(arms_x(left_inds),'omitnan'); %estimate the left arm x with median
 left_inds = arms_x>(leftarm_x-50) & arms_x<(leftarm_x+50); %narrow the search range
 leftarm_x = median(arms_x(left_inds),'omitnan'); %re-estimate
 
-center_inds = arms_x>575 & arms_x<825; %repeat the above for the center and right arms
-centerarm_x = median(arms_x(center_inds),'omitnan');
-center_inds = arms_x>(centerarm_x-50) & arms_x<(centerarm_x+50);
-centerarm_x = median(arms_x(center_inds),'omitnan');
+middle_inds = arms_x>(v.width/3) & arms_x<(2*v.width/3); %repeat the above for the center and right arms
+middlearm_x = median(arms_x(middle_inds),'omitnan');
+middle_inds = arms_x>(middlearm_x-50) & arms_x<(middlearm_x+50);
+middlearm_x = median(arms_x(middle_inds),'omitnan');
 
-right_inds = arms_x>1175 & arms_x<1425;
+right_inds = arms_x>(2*v.width/3) & arms_x<v.width;
 rightarm_x = median(arms_x(right_inds),'omitnan');
 right_inds = arms_x>(rightarm_x-50) & arms_x<(rightarm_x+50);
 rightarm_x = median(arms_x(right_inds),'omitnan');
 
 leftarm_y = median(arms_y(left_inds),'omitnan'); %using the narrow search ranges, find the y's
-centerarm_y = median(arms_y(center_inds),'omitnan');
+middlearm_y = median(arms_y(middle_inds),'omitnan');
 rightarm_y = median(arms_y(right_inds),'omitnan');
 
-center_x = mean([leftarm_x centerarm_x rightarm_x]);
-center_y = mean([leftarm_y centerarm_y rightarm_y]);
+center_x = mean([leftarm_x middlearm_x rightarm_x]);
+center_y = mean([leftarm_y middlearm_y rightarm_y]);
 
 leftarm_length = get_dist(center_x,center_y,leftarm_x,leftarm_y);
-centerarm_length = get_dist(center_x,center_y,centerarm_x,centerarm_y);
+middlearm_length = get_dist(center_x,center_y,middlearm_x,middlearm_y);
 rightarm_length = get_dist(center_x,center_y,rightarm_x,rightarm_y);
-arm_length_in_pixels = mean([leftarm_length centerarm_length rightarm_length]);
+arm_length_in_pixels = mean([leftarm_length middlearm_length rightarm_length]);
 pixels_per_meter = arm_length_in_pixels/arm_length_in_meters;
 arm_width = arm_width_in_meters*pixels_per_meter;
-assert(all(([leftarm_length centerarm_length rightarm_length]./arm_length_in_pixels)>0.95),...
+assert(all(([leftarm_length middlearm_length rightarm_length]./arm_length_in_pixels)>0.95),...
     'detected y-maze arm lengths are out of shape - tracking is probably too poor to continue')
 
 
 %draw y-maze for validation
 figure('Units','centimeters','Position',figure_size);
 subplot(2,4,1)
-mazeends_x = [leftarm_x center_x centerarm_x center_x rightarm_x];
-mazeends_y =  [leftarm_y center_y centerarm_y center_y rightarm_y];
+mazeends_x = [leftarm_x center_x middlearm_x center_x rightarm_x];
+mazeends_y =  [leftarm_y center_y middlearm_y center_y rightarm_y];
 plot(mazeends_x,mazeends_y,'r');
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('detected ymaze skeleton')
 
 %calculate some points along ymaze arms (for later, to only use mouse tracking near arms)
-centerarm_ysign = (centerarm_y-center_y)/abs(centerarm_y-center_y);
-num_armpts = length(center_y:centerarm_ysign*arm_width/4:centerarm_y);
+middlearm_ysign = (middlearm_y-center_y)/abs(middlearm_y-center_y);
+num_armpts = length(center_y:middlearm_ysign*arm_width/4:middlearm_y);
 leftarm_xstep = (center_x-leftarm_x)/(num_armpts-1);
-centerarm_xstep = (center_x-centerarm_x)/(num_armpts-1);
+middlearm_xstep = (center_x-middlearm_x)/(num_armpts-1);
 rightarm_xstep = (center_x-rightarm_x)/(num_armpts-1);
 leftarm_ystep = (center_y-leftarm_y)/(num_armpts-1);
-centerarm_ystep = (center_y-centerarm_y)/(num_armpts-1);
+middlearm_ystep = (center_y-middlearm_y)/(num_armpts-1);
 rightarm_ystep = (center_y-rightarm_y)/(num_armpts-1);
-mazepts_x = [leftarm_x:leftarm_xstep:center_x, centerarm_x:centerarm_xstep:center_x, rightarm_x:rightarm_xstep:center_x];
-mazepts_y = [leftarm_y:leftarm_ystep:center_y, centerarm_y:centerarm_ystep:center_y, rightarm_y:rightarm_ystep:center_y];
+mazepts_x = [leftarm_x:leftarm_xstep:center_x, middlearm_x:middlearm_xstep:center_x, rightarm_x:rightarm_xstep:center_x];
+mazepts_y = [leftarm_y:leftarm_ystep:center_y, middlearm_y:middlearm_ystep:center_y, rightarm_y:rightarm_ystep:center_y];
 num_mazepts = length(mazepts_x);
 
 subplot(2,4,2)
 plot(mazeends_x,mazeends_y);
 hold on
 scatter(mazepts_x,mazepts_y,70,'MarkerFaceColor','flat')
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('ymaze area');
 
 %% delete all mouse tracking that's too far from the ymaze (change to NaNs)
@@ -194,64 +205,41 @@ subplot(2,4,5)
 plot(mazeends_x,mazeends_y);
 hold on
 scatter(body_x,body_y,1,[0 0 1]);%colors)
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('all mouse body positions')
 
 subplot(2,4,6)
 % plot(mazeends_x,mazeends_y);
 hold on
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('first 30 s trajectory')
 plot(body_x(1:fps*30),body_y(1:fps*30),'b','LineWidth',0.5);
-
-% p1 = scatter(body_x(1),body_y(1),3,[1 0 0]);
-% for i = 1:10:min([1000 num_frames])
-%     p1.XData = median(smooth_body_x(i:i+4),'omitnan');
-%     p1.YData = median(smooth_body_y(i:i+4),'omitnan');
-%     
-%     % Capture the plot as an image 
-%     frame = getframe(gcf); 
-%     im = frame2im(frame); 
-%     [imind,cm] = rgb2ind(im,256); 
-%     % Write to the GIF File 
-%     if i == 1 
-%       imwrite(imind,cm,[output_filename '.gif'],'gif', 'Loopcount',inf,'DelayTime',0.033); 
-%     else 
-%       imwrite(imind,cm,[output_filename '.gif'],'gif','WriteMode','append'); 
-%     end 
-% end
 
 %% calculate results
 %calculate mouse distance from 3 arms
 leftarm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(leftarm_x,[num_frames 1]), repmat(leftarm_y,[num_frames 1]));
 rightarm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(rightarm_x,[num_frames 1]), repmat(rightarm_y,[num_frames 1]));
-centerarm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(centerarm_x,[num_frames 1]), repmat(centerarm_y,[num_frames 1]));
+middlearm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(middlearm_x,[num_frames 1]), repmat(middlearm_y,[num_frames 1]));
 
 inleft = (leftarm_dist/leftarm_length)<insidearm_threshold_fraction;
 inright = (rightarm_dist/rightarm_length)<insidearm_threshold_fraction;
-incenter = (centerarm_dist/centerarm_length)<insidearm_threshold_fraction;
-
-inmultiple = inleft&inright | inleft&incenter | inright&incenter;
+inmiddle = (middlearm_dist/middlearm_length)<insidearm_threshold_fraction;
+inmultiple = inleft&inright | inleft&inmiddle | inright&inmiddle;
 
 inleft(inmultiple) = 0;
 inright(inmultiple) = 0;
-incenter(inmultiple) = 0;
-innone = ~inleft&~inright&~incenter;
-
+inmiddle(inmultiple) = 0;
+innone = ~inleft&~inright&~inmiddle;
 assert((sum(inmultiple)/num_frames)<0.05, 'mouse tracking is too poor, need to make analysis even more robust');
 
-time_in_locations = [sum(inleft) sum(inright) sum(incenter) sum(innone)]/fps;
-
-sequence_of_locations = inleft + 2*inright + 3*incenter;
-
+time_in_locations = [sum(inleft) sum(inright) sum(inmiddle) sum(innone)]/fps;
+sequence_of_locations = inleft + 2*inright + 3*inmiddle;
 sequence_of_arms = sequence_of_locations;
 sequence_of_arms(sequence_of_arms==0) = [];
-
 sequence_of_arm_entries = sequence_of_arms;
 sequence_of_arm_entries(logical([0; diff(sequence_of_arm_entries)==0])) = [];
-
 num_arm_entries = length(sequence_of_arm_entries);
 
 num_alternations = 0;
@@ -296,10 +284,8 @@ text(0,0.19,num2str(results.sequence_of_arm_entries),'FontSize',7)
 text(0,0.11,['Number of alternations: ' num2str(results.number_of_alternations)])
 text(0,0.03,['Spontaneous alternation: ' num2str(results.spontaneous_alternation_percent, '%.1f') ' %'])
 
-
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
-
 
 %write custom xls file of results
 C = cell(7,2);

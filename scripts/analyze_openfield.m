@@ -23,15 +23,28 @@ output_filename = fullfile(save_dir,filename);
 
 data = h5read(h5_filename,'/df_with_missing/table');
 ary = data.values_block_0';
-%columns: top-right, top-left, bottom-left, bottome-right, right-ear, left-ear, nose, tail-base; each have 3 rows, for [x, y, likelihood]
+%columns: top-right, top-left, bottom-left, bottom-right, right-ear, left-ear, nose, tail-base; each have 3 columns, for [x, y, likelihood]
 colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x','BR_y','BR_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
 
-%vertically flip all y values
+%estimate original video size
 ystrings = repmat({'_y'},1,num_cols);
 col_is_y = cellfun(@strfind,colnames,ystrings,'UniformOutput',false);
 col_is_y = find(~cellfun(@isempty,col_is_y));
-ary(:,col_is_y) = 1080-ary(:,col_is_y);
+xstrings = repmat({'_x'},1,num_cols);
+col_is_x = cellfun(@strfind,colnames,xstrings,'UniformOutput',false);
+col_is_x = find(~cellfun(@isempty,col_is_x));
+arymax = max(ary,'omitnan');
+v.width = max(arymax(col_is_x),'omitnan');
+v.height = max(arymax(col_is_y),'omitnan');
+
+%vertically flip all y values
+ary(:,col_is_y) = v.height-ary(:,col_is_y);
+
+%get image/plot limits
+largest_range = max([v.width v.height]);
+xlimits = [(v.width-largest_range) (v.width+largest_range)]/2;
+ylimits = [(v.height-largest_range) (v.height+largest_range)]/2;
 
 %% calculate box corner locations
 topright_x_ind = find(strcmp(colnames,'TR_x'));
@@ -45,7 +58,7 @@ botright_y_ind = find(strcmp(colnames,'BR_y'));
 
 topright_x = ary(:,topright_x_ind);
 topright_y = ary(:,topright_y_ind);
-topright_inds = topright_x>800 & topright_x<1440 & topright_y>540 & topright_y<1080;
+topright_inds = topright_x>(v.width/2) & topright_x<v.width & topright_y>(v.height/2) & topright_y<v.height;
 topright_x = topright_x(topright_inds);
 topright_x = median(topright_x,'omitnan');
 topright_y = topright_y(topright_inds);
@@ -53,7 +66,7 @@ topright_y = median(topright_y,'omitnan');
 
 topleft_x = ary(:,topleft_x_ind);
 topleft_y = ary(:,topleft_y_ind);
-topleft_inds = topleft_x<800 & topleft_x>0 & topleft_y>540 & topleft_y<1080;
+topleft_inds = topleft_x<(v.width/2) & topleft_x>0 & topleft_y>(v.height/2) & topleft_y<v.height;
 topleft_x = topleft_x(topleft_inds);
 topleft_x = median(topleft_x,'omitnan');
 topleft_y = topleft_y(topleft_inds);
@@ -61,7 +74,7 @@ topleft_y = median(topleft_y,'omitnan');
 
 botleft_x = ary(:,botleft_x_ind);
 botleft_y = ary(:,botleft_y_ind);
-botleft_inds = botleft_x<800 & botleft_x>0 & botleft_y<540 & botleft_y>0;
+botleft_inds = botleft_x<(v.width/2) & botleft_x>0 & botleft_y<(v.height/2) & botleft_y>0;
 botleft_x = botleft_x(botleft_inds);
 botleft_x = median(botleft_x,'omitnan');
 botleft_y = botleft_y(botleft_inds);
@@ -69,7 +82,7 @@ botleft_y = median(botleft_y,'omitnan');
 
 botright_x = ary(:,botright_x_ind);
 botright_y = ary(:,botright_y_ind);
-botright_inds = botright_x>800 & botright_x<1440 & botright_y<540 & botright_y>0;
+botright_inds = botright_x>(v.width/2) & botright_x<v.width & botright_y<(v.height/2) & botright_y>0;
 botright_x = botright_x(botright_inds);
 botright_x = median(botright_x,'omitnan');
 botright_y = botright_y(botright_inds);
@@ -90,8 +103,8 @@ pixels_per_meter = box_length_in_pixels/box_length_in_meters;
 figure('Units','centimeters','Position',figure_size);
 subplot(2,4,1)
 plot(corners_x,corners_y,'r');
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('detected box edges')
 
 %calculate some points along the box edge (for later, to track mice distance from edges)
@@ -116,9 +129,10 @@ num_edgepts = length(edgepts_x);
 subplot(2,4,2)
 scatter(edgepts_x,edgepts_y,200,'MarkerFaceColor','flat');
 hold on
-patch([corners_x 1550 1550 -100 -100 1550 corners_x(1)],[corners_y 1370 -280 -280 1370 1370 corners_y(1)],'w','EdgeColor','None');
-xlim([-100 1550]);
-ylim([-280 1370])
+patch([corners_x xlimits(2) xlimits(2) xlimits(1) xlimits(1) xlimits(2) corners_x(1)],...
+    [corners_y ylimits(2) ylimits(1) ylimits(1) ylimits(2) ylimits(2) corners_y(1)],'w','EdgeColor','None');
+xlim(xlimits);
+ylim(ylimits)
 title('edge location');
 
 
@@ -248,15 +262,15 @@ subplot(2,4,5)
 plot(corners_x,corners_y);
 hold on
 scatter(smooth_body_x,smooth_body_y,1,[0 0 1]);%colors)
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('all mouse body positions')
 
 subplot(2,4,6)
 plot(corners_x,corners_y);
 hold on
-xlim([-100 1550]);
-ylim([-280 1370])
+xlim(xlimits);
+ylim(ylimits)
 title('first 30 s trajectory')
 plot(smooth_body_x(1:fps*30),smooth_body_y(1:fps*30),'b','LineWidth',0.5);
 
