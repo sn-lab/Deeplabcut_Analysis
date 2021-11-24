@@ -17,7 +17,10 @@ figure_size = [10 10 25 10];
 
 %load tracking data
 [save_dir, filename, ~] = fileparts(h5_filename);
-ind = strfind(filename,'DLC_mobnet');
+ind = strfind(filename,'DeepCut');
+if isempty(ind)
+    ind = strfind(filename,'.h5');
+end
 filename = filename(1:ind-1);
 output_filename = fullfile(save_dir,filename);
 
@@ -34,9 +37,9 @@ col_is_y = find(~cellfun(@isempty,col_is_y));
 xstrings = repmat({'_x'},1,num_cols);
 col_is_x = cellfun(@strfind,colnames,xstrings,'UniformOutput',false);
 col_is_x = find(~cellfun(@isempty,col_is_x));
-arymax = max(ary,'omitnan');
-v.width = max(arymax(col_is_x),'omitnan');
-v.height = max(arymax(col_is_y),'omitnan');
+arymax = max(ary,[],'omitnan');
+v.width = max(arymax(col_is_x),[],'omitnan');
+v.height = max(arymax(col_is_y),[],'omitnan');
 
 %vertically flip all y values
 ary(:,col_is_y) = v.height-ary(:,col_is_y);
@@ -219,8 +222,8 @@ head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
 body_x =  mean([head_x tail_x],2,'omitnan');
 body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/2),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/2),'median');
+smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
+smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
 
 %find all mouse labels that are very far from the body center estimate, and nan them
 dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
@@ -245,18 +248,20 @@ tail_y(too_far_idx) = nan;
 
 
 %% estimate the mouse's body position again
-smooth_tail_x = rolling_average(tail_x,1,round(fps/2),'median');
-smooth_tail_y = rolling_average(tail_y,1,round(fps/2),'median');
-smooth_nose_x = rolling_average(nose_x,1,round(fps/4),'median'); %head moves faster, so smooth less
-smooth_nose_y = rolling_average(nose_y,1,round(fps/4),'median');
-smooth_rightear_x = rolling_average(rightear_x,1,round(fps/4),'median');
-smooth_rightear_y = rolling_average(rightear_y,1,round(fps/4),'median');
-smooth_leftear_x = rolling_average(leftear_x,1,round(fps/4),'median');
-smooth_leftear_y = rolling_average(leftear_y,1,round(fps/4),'median');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/10),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/10),'median');
+smooth_nose_x = rolling_average(nose_x,1,round(fps/10),'median'); %head moves faster, so smooth less
+smooth_nose_y = rolling_average(nose_y,1,round(fps/10),'median');
+smooth_rightear_x = rolling_average(rightear_x,1,round(fps/10),'median');
+smooth_rightear_y = rolling_average(rightear_y,1,round(fps/10),'median');
+smooth_leftear_x = rolling_average(leftear_x,1,round(fps/10),'median');
+smooth_leftear_y = rolling_average(leftear_y,1,round(fps/10),'median');
 smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
 smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
 smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
 smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
+smooth_body_x = rolling_average(smooth_body_x,1,round(fps/5),'median'); %downsample body to 5 Hz
+smooth_body_y = rolling_average(smooth_body_y,1,round(fps/5),'median');
 
 subplot(2,4,5)
 plot(corners_x,corners_y);

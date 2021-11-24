@@ -18,8 +18,12 @@ insidearm_threshold_fraction = (arm_length_in_meters-armnotch_length)/arm_length
 
 %load tracking data
 [save_dir, filename, ~] = fileparts(h5_filename);
-ind = strfind(filename,'DLC_mobnet');
+ind = strfind(filename,'DeepCut');
+if isempty(ind)
+    ind = strfind(filename,'.h5');
+end
 filename = filename(1:ind-1);
+
 output_filename = fullfile(save_dir,filename);
 data = h5read(h5_filename,'/df_with_missing/table');
 ary = data.values_block_0';
@@ -34,9 +38,9 @@ col_is_y = find(~cellfun(@isempty,col_is_y));
 xstrings = repmat({'_x'},1,num_cols);
 col_is_x = cellfun(@strfind,colnames,xstrings,'UniformOutput',false);
 col_is_x = find(~cellfun(@isempty,col_is_x));
-arymax = max(ary,'omitnan');
-v.width = max(arymax(col_is_x),'omitnan');
-v.height = max(arymax(col_is_y),'omitnan');
+arymax = max(ary,[],'omitnan');
+v.width = max(arymax(col_is_x),[],'omitnan');
+v.height = max(arymax(col_is_y),[],'omitnan');
 
 %vertically flip all y values
 ary(:,col_is_y) = v.height-ary(:,col_is_y);
@@ -169,8 +173,8 @@ head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
 body_x =  mean([head_x tail_x],2,'omitnan');
 body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/2),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/2),'median');
+smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
+smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
 
 %find all mouse labels that are very far from the body center estimate, and nan them
 dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
@@ -198,8 +202,8 @@ head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
 body_x =  mean([head_x tail_x],2,'omitnan');
 body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/2),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/2),'median');
+smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
+smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
 
 subplot(2,4,5)
 plot(mazeends_x,mazeends_y);

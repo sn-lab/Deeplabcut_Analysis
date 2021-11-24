@@ -1,5 +1,5 @@
-function analyze_objectinteraction(h5_filename)
-% FUNCTION analyze_objectinteraction(h5_filename)
+function analyze_objectinteraction(h5_filename,param)
+% FUNCTION analyze_objectinteraction(h5_filename,param)
 %
 % analyzes h5 files output from deeplabcut tracking of object recognition
 % videos with multiple objects placed in the red box, using the 
@@ -17,8 +17,40 @@ function analyze_objectinteraction(h5_filename)
 %
 %INPUTS
 %h5_filename: full path/filename of a h5 file to analyze
+%param (optional):
+%   param.bkgd_fraction: fraction of box background to use as "non-object
+%       pixels" (default=0.85)
+%   param.hl_ratio: ratio (hue/dark-luminance) of reliance for object
+%       detection (default=0.3)
+%   param.zscore_threshold: z-score threshold to define object pixels (default=3)
+%   param.min_obj_size: minimum number of pixels to call an object
+%       (default=500)
+%   med_filt: size of median filter, in pixels (default=20)
 
-%set parameters
+if nargin<2
+    %set parameters
+    hl_fraction = 0.3; %ratio (hue/dark-luminance) of reliance for object detection
+    bkgd_fraction = 0.85; %fraction of box background to use as "non-object pixels"
+    zscore_threshold = 3; %z-score threshold to define object pixels
+    min_obj_size = 500; %minimum number of pixels to call an object
+    med_filt = 20; %size of median filter, in pixels
+else
+    if isfield(param,'hl_ratio')
+        hl_fraction = param.hl_ratio;
+    end
+    if isfield(param,'bkgd_fraction')
+        bkgd_fraction = param.bkgd_fraction;
+    end
+    if isfield(param,'zscore_threshold')
+        zscore_threshold = param.zscore_threshold;
+    end
+    if isfield(param,'min_obj_size')
+        min_obj_size = param.min_obj_size;
+    end
+    if isfield(param,'med_filt')
+        med_filt = param.med_filt;
+    end
+end
 fps = 30;
 nearobject_threshold = 0.04; %near object positions
 verynearobject_threshold = 0.02; %very near object positions
@@ -27,7 +59,10 @@ figure_size = [10 10 25 10];
 
 %load tracking data
 [save_dir, filename, ~] = fileparts(h5_filename);
-ind = strfind(filename,'DLC_mobnet');
+ind = strfind(filename,'DeepCut');
+if isempty(ind)
+    ind = strfind(filename,'.h5');
+end
 filename = filename(1:ind-1);
 output_filename = fullfile(save_dir,filename);
 data = h5read(h5_filename,'/df_with_missing/table');
@@ -40,7 +75,7 @@ colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x
 avi_filename = [output_filename '.avi'];
 assert(exist(avi_filename,'file')==2,['Cannot find avi file associated with the h5 file. ',...
     'Make sure the original video file is in the same folder as the h5 file, and shares',...
-    ' the same filename before the "DLC_mobnet_..." (e.g. video1.avi and video1DLC_mobnet_100....h5']);
+    ' the same filename before "DeepCut" (e.g. video1.avi and video1DeepCut_resnet....h5']);
 v = VideoReader(avi_filename);
 time_incr = v.Duration/100;
 sample_frame_times = 0:time_incr:v.Duration;
@@ -159,9 +194,6 @@ num_edgepts = length(edgepts_x);
 
 
 %% detect object locations (hue and dark-value method)
-min_object_size = 500; %in pixels
-object_filt = 20;
-
 %convert median frame to hsv (h and v may be most useful to find objects, since the background is hue-stable and not dark)
 median_frame_hsv = rgb2hsv(median_frame);
 median_frame_hue = 360*median_frame_hsv(:,:,1);
@@ -177,10 +209,10 @@ median_frame_hue(median_frame_hue>180) = median_frame_hue(median_frame_hue>180)-
 median_frame_hue(median_frame_hue<-180) = median_frame_hue(median_frame_hue<-180)+360;
 median_frame_hue_abs = abs(median_frame_hue);
 
-%using the smallest 90% difference hues (confident these are background pixels, since objects are small), 
+%using the smallest % difference hues (confident these are background pixels, since objects are small), 
 %calculate the S.D. of the background hue and convert hue differences to hue z-scores
-hue_80th = prctile(median_frame_hue_abs(full_bkgd_mask),80);
-bkgd_mask = median_frame_hue_abs<=hue_80th & full_bkgd_mask;
+hue_nonobj = prctile(median_frame_hue_abs(full_bkgd_mask),100*bkgd_fraction);
+bkgd_mask = median_frame_hue_abs<=hue_nonobj & full_bkgd_mask;
 bkgd_hue_mean = mean(median_frame_hue_abs(bkgd_mask),'omitnan');
 bkgd_hue_std = std(median_frame_hue_abs(bkgd_mask),'omitnan');
 median_frame_hue_zscr = full_bkgd_mask.*abs(median_frame_hue_abs-bkgd_hue_mean)/bkgd_hue_std;
@@ -194,9 +226,9 @@ median_frame_vdark_zscr(median_frame_vdark_zscr<0) = 0;
 
 %add z-scores together, median filter to smooth pixels, then threshold to
 %find objects mask
-median_frame_comb_zscr = (2*median_frame_vdark_zscr)+median_frame_hue_zscr;
-median_frame_cz_filt = medfilt2(median_frame_comb_zscr,[object_filt object_filt]);
-objects_mask = median_frame_cz_filt>10;
+median_frame_comb_zscr = (hl_fraction*median_frame_hue_zscr) + ((1-hl_fraction)*median_frame_vdark_zscr);
+median_frame_cz_filt = medfilt2(median_frame_comb_zscr,[med_filt med_filt]);
+objects_mask = median_frame_cz_filt>zscore_threshold;
 
 %find connected components, remove all that are too small, find connected
 %components again
@@ -204,7 +236,7 @@ objects_label = bwlabel(objects_mask);
 num_labels = max(max(objects_label));
 for i=1:num_labels
     label_size = sum(sum(objects_label==i));
-    if label_size<min_object_size
+    if label_size<min_obj_size
         objects_label(objects_label==i) = 0;
     end
 end
@@ -280,40 +312,40 @@ figure(); %new "object detection details" figure
 ax = subplot(3,3,1);
 imshow(median_frame)
 set(ax,'YDir','normal');
-title('median frame')
+title('panel 1: median frame')
 ax = subplot(3,3,2);
 imshow(full_bkgd_mask)
 set(ax,'YDir','normal');
-title('within-box mask')
+title('panel 2: box mask')
 ax = subplot(3,3,3);
 imshow(bkgd_mask)
 set(ax,'YDir','normal');
-title('80th percentile hue mask')
+title('panel 3: bkgd pixels')
 ax = subplot(3,3,4);
 imshow(median_frame_hue_zscr/20)
 set(ax,'YDir','normal');
-title('hue z-score')
+title('panel 4: hue z-score')
 ax = subplot(3,3,5);
 imshow(median_frame_vdark_zscr/10)
 set(ax,'YDir','normal');
-title('(darker) value z-score')
+title('panel 5: dark-level z-score')
 ax = subplot(3,3,6);
 imshow(median_frame_cz_filt/30)
 set(ax,'YDir','normal');
-title('combined z-score, median filtered')
+title('panel 6: combined z-score')
 ax = subplot(3,3,7);
 imshow(objects_mask)
 set(ax,'YDir','normal');
-title('objects mask')
+title('panel 7: objects mask')
 ax = subplot(3,3,8);
 imshow(objects_by_color)
 set(ax,'YDir','normal');
-title('detected objects')
+title('panel 8: detected objects')
 ax = subplot(3,3,9);
 imshow(median_frame/2)
 set(ax,'YDir','normal');
 hold on
-title('object centers and outlines')
+title('panel 9: object outlines')
 for o = 1:num_objects
     plot(objects_edgepts_x(o,:),objects_edgepts_y(o,:),'Color',colors(o,:),'LineWidth',1)
     scatter(objects_x(o),objects_y(o),'kx','MarkerEdgeColor',colors(o,:))
@@ -413,13 +445,13 @@ tail_y(out_of_box_idx) = nan;
 mouse_size_in_pixels = median(get_dist(nose_x,nose_y,tail_x,tail_y),'omitnan');
 % mouse_size_in_meters = mouse_size_in_pixels/pixels_per_meter;
 
-%create a time-smoothed, body-center estimate
+%create a time-smoothed, body-center estimate (downsampled to 5 Hz)
 head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
 body_x =  mean([head_x tail_x],2,'omitnan');
 body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/2),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/2),'median');
+smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
+smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
 
 %find all mouse labels that are very far from the body center estimate, and nan them
 dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
@@ -444,18 +476,20 @@ tail_y(too_far_idx) = nan;
 
 
 %% estimate the mouse's body position again
-smooth_tail_x = rolling_average(tail_x,1,round(fps/2),'median');
-smooth_tail_y = rolling_average(tail_y,1,round(fps/2),'median');
-smooth_nose_x = rolling_average(nose_x,1,round(fps/4),'median'); %head moves faster, so smooth less
-smooth_nose_y = rolling_average(nose_y,1,round(fps/4),'median');
-smooth_rightear_x = rolling_average(rightear_x,1,round(fps/4),'median');
-smooth_rightear_y = rolling_average(rightear_y,1,round(fps/4),'median');
-smooth_leftear_x = rolling_average(leftear_x,1,round(fps/4),'median');
-smooth_leftear_y = rolling_average(leftear_y,1,round(fps/4),'median');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/10),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/10),'median');
+smooth_nose_x = rolling_average(nose_x,1,round(fps/10),'median');
+smooth_nose_y = rolling_average(nose_y,1,round(fps/10),'median');
+smooth_rightear_x = rolling_average(rightear_x,1,round(fps/10),'median');
+smooth_rightear_y = rolling_average(rightear_y,1,round(fps/10),'median');
+smooth_leftear_x = rolling_average(leftear_x,1,round(fps/10),'median');
+smooth_leftear_y = rolling_average(leftear_y,1,round(fps/10),'median');
 smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
 smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
 smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
 smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
+smooth_body_x = rolling_average(smooth_body_x,1,round(fps/5),'median'); %downsample body to 5 Hz
+smooth_body_y = rolling_average(smooth_body_y,1,round(fps/5),'median');
 
 subplot(2,4,5)
 plot(corners_x,corners_y);
@@ -482,9 +516,9 @@ headang_rnose = atan2((smooth_nose_y-smooth_rightear_y),(smooth_nose_x-smooth_ri
 vs_x = sum([2*cos(headang_ears) cos(headang_lnose) cos(headang_rnose)],2,'omitnan');
 vs_y = sum([2*sin(headang_ears) sin(headang_lnose) sin(headang_rnose)],2,'omitnan');
 
-%get smoother vector sum head angle
-smooth_vs_x = rolling_average(vs_x,1,round(fps/4),'median');
-smooth_vs_y = rolling_average(vs_y,1,round(fps/4),'median');
+%get smoother vector sum head angle (downsample to 10 fps
+smooth_vs_x = rolling_average(vs_x,1,round(fps/10),'median');
+smooth_vs_y = rolling_average(vs_y,1,round(fps/10),'median');
 smooth_headang = atan2(smooth_vs_y,smooth_vs_x);
 
 
@@ -538,7 +572,7 @@ text(0,0.40,['[' num2str(results.object_interaction_time_4cm, '%.1f  ') '] s,   
 text(0,0.32,'Time interacting with objects - within 2 cm: ')
 text(0,0.27,['[' num2str(results.object_interaction_time_2cm, '%.1f  ') '] s,   [' num2str(round(1000*results.object_interaction_time_2cm/results.total_time_in_seconds)/10, '%.1f  ') '] %']);
 
-saveas(F1,[output_filename '.png'])
+saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
 
 %write custom xls file of results
