@@ -18,42 +18,42 @@ function analyze_objectinteraction(h5_filename,param)
 %INPUTS
 %h5_filename: full path/filename of a h5 file to analyze
 %param (optional):
-%   param.bkgd_fraction: fraction of box background to use as "non-object
-%       pixels" (default=0.85)
-%   param.hl_ratio: ratio (hue/dark-luminance) of reliance for object
-%       detection (default=0.3)
-%   param.zscore_threshold: z-score threshold to define object pixels (default=3)
-%   param.min_obj_size: minimum number of pixels to call an object
-%       (default=500)
-%   med_filt: size of median filter, in pixels (default=20)
+%     fps = framerate of the original video recordings
+%     down_fps = effective fps after rolling average performed to remove some tracking errors
+%     bodypart = bodypart to use for distance measurements (e.g. mouse-object distance)
+%     view_cone = viewing cone angle (i.e. horizontal FOV, in degrees) to consider an object inside the mouse's visual field
+%     close_threshold = minimum distance (cm) from mouse to object to count as interacting
+%     hue_weight = %the weight of hue (vs dark-luminance) in object detection
+%     bkgd_fraction = fraction of box background to use as "non-object pixels"
+%     zscore_threshold = z-score threshold to define object pixels
+%     min_obj_size = minimum size (in cm^2) to identify an object
+%     med_filt = size of median filter, in cm
 
 if nargin<2
-    %set parameters
-    hl_fraction = 0.3; %ratio (hue/dark-luminance) of reliance for object detection
+    %set default parameters
+    fps = 30; %framerate of the original video recordings
+    down_fps = 10; %effective fps after rolling average performed to remove some tracking errors
+    bodypart = 'head'; %bodypart to use for distance measurements (e.g. mouse-object distance)
+    view_cone = 90; %viewing cone angle (i.e. horizontal FOV, in degrees) to consider an object inside the mouse's visual field
+    close_threshold = 4; %minimum distance (cm) from mouse to object to count as interacting
+    hue_weight = 0.3; %the weight of hue (vs dark-luminance) in object detection
     bkgd_fraction = 0.85; %fraction of box background to use as "non-object pixels"
     zscore_threshold = 3; %z-score threshold to define object pixels
-    min_obj_size = 500; %minimum number of pixels to call an object
-    med_filt = 20; %size of median filter, in pixels
+    min_obj_size = 5; %minimum size (in cm^2) to identify an object
+    med_filt = 1; %size of median filter, in cm
 else
-    if isfield(param,'hl_ratio')
-        hl_fraction = param.hl_ratio;
-    end
-    if isfield(param,'bkgd_fraction')
-        bkgd_fraction = param.bkgd_fraction;
-    end
-    if isfield(param,'zscore_threshold')
-        zscore_threshold = param.zscore_threshold;
-    end
-    if isfield(param,'min_obj_size')
-        min_obj_size = param.min_obj_size;
-    end
-    if isfield(param,'med_filt')
-        med_filt = param.med_filt;
-    end
+    fps = param.fps;
+    down_fps = param.down_fps;
+    bodypart = param.bodypart;
+    view_cone = param.view_cone;
+    close_threshold = param.close_threshold;
+    hue_weight = param.hue_weight;
+    bkgd_fraction = param.bkgd_fraction;
+    zscore_threshold = param.zscore_threshold;
+    min_obj_size = param.min_obj_size;
+    med_filt = param.med_filt;
 end
-fps = 30;
-nearobject_threshold = 0.04; %near object positions
-verynearobject_threshold = 0.02; %very near object positions
+
 box_length_in_meters = 0.4445;
 figure_size = [10 10 25 10];
 
@@ -226,16 +226,19 @@ median_frame_vdark_zscr(median_frame_vdark_zscr<0) = 0;
 
 %add z-scores together, median filter to smooth pixels, then threshold to
 %find objects mask
-median_frame_comb_zscr = (hl_fraction*median_frame_hue_zscr) + ((1-hl_fraction)*median_frame_vdark_zscr);
-median_frame_cz_filt = medfilt2(median_frame_comb_zscr,[med_filt med_filt]);
+med_filt_pix = max([1 round(100*med_filt/pixels_per_meter)]); %size of median filter, in pixels (from cm)
+median_frame_comb_zscr = (hue_weight*median_frame_hue_zscr) + ((1-hue_weight)*median_frame_vdark_zscr);
+median_frame_cz_filt = medfilt2(median_frame_comb_zscr,[med_filt_pix med_filt_pix]);
 objects_mask = median_frame_cz_filt>zscore_threshold;
 
 %find connected components, remove all that are too small, find connected
 %components again
 objects_label = bwlabel(objects_mask); 
-num_labels = max(max(objects_label));
+num_labels = max(objects_label(:));
 for i=1:num_labels
-    label_size = sum(sum(objects_label==i));
+    label_size = sum(objects_label(:)==i); %size in pixels
+    label_size = label_size/(pixels_per_meter^2); %size in m^2
+    label_size = label_size*(100^2); %size in cm^2
     if label_size<min_obj_size
         objects_label(objects_label==i) = 0;
     end
@@ -328,7 +331,7 @@ title('panel 4: hue z-score')
 ax = subplot(3,3,5);
 imshow(median_frame_vdark_zscr/10)
 set(ax,'YDir','normal');
-title('panel 5: dark-level z-score')
+title('panel 5: dark z-score')
 ax = subplot(3,3,6);
 imshow(median_frame_cz_filt/30)
 set(ax,'YDir','normal');
@@ -351,7 +354,7 @@ for o = 1:num_objects
     scatter(objects_x(o),objects_y(o),'kx','MarkerEdgeColor',colors(o,:))
     text(objects_x(o)+(1.5*objects_radius(o)),objects_y(o)+(1.5*objects_radius(o)),num2str(o),'Color',colors(o,:))
 end
-saveas(gcf,[output_filename '_DetectionDetails.fig'])
+saveas(gcf,[output_filename '_DetectionDetails.png'])
 close(gcf)
 
 %% incorporate object detection into summary plot
@@ -440,18 +443,20 @@ out_of_box_idx(closest_sides==4) = tail_x(closest_sides==4)>closest_edgepts_x(cl
 tail_x(out_of_box_idx) = nan;
 tail_y(out_of_box_idx) = nan;
 
-%delete all mouse tracking that's too far from the mouse's estimated position
+%% delete all mouse tracking that's too far from the mouse's estimated position
 %estimate the mouse's size
 mouse_size_in_pixels = median(get_dist(nose_x,nose_y,tail_x,tail_y),'omitnan');
-% mouse_size_in_meters = mouse_size_in_pixels/pixels_per_meter;
 
-%create a time-smoothed, body-center estimate (downsampled to 5 Hz)
+%create time-smoothed bodypart estimates (downsampled to 5 Hz)
+verysmooth_fps = 5;
 head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
-body_x =  mean([head_x tail_x],2,'omitnan');
-body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/verysmooth_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/verysmooth_fps),'median');
+smooth_head_x = rolling_average(head_x,1,round(fps/verysmooth_fps),'median');
+smooth_head_y = rolling_average(head_y,1,round(fps/verysmooth_fps),'median');
+smooth_body_x = mean([smooth_head_x smooth_tail_x],2,'omitnan');
+smooth_body_y = mean([smooth_head_y smooth_tail_y],2,'omitnan');
 
 %find all mouse labels that are very far from the body center estimate, and nan them
 dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
@@ -475,21 +480,19 @@ tail_x(too_far_idx) = nan;
 tail_y(too_far_idx) = nan;
 
 
-%% estimate the mouse's body position again
-smooth_tail_x = rolling_average(tail_x,1,round(fps/10),'median');
-smooth_tail_y = rolling_average(tail_y,1,round(fps/10),'median');
-smooth_nose_x = rolling_average(nose_x,1,round(fps/10),'median');
-smooth_nose_y = rolling_average(nose_y,1,round(fps/10),'median');
-smooth_rightear_x = rolling_average(rightear_x,1,round(fps/10),'median');
-smooth_rightear_y = rolling_average(rightear_y,1,round(fps/10),'median');
-smooth_leftear_x = rolling_average(leftear_x,1,round(fps/10),'median');
-smooth_leftear_y = rolling_average(leftear_y,1,round(fps/10),'median');
+%% estimate the mouse's body position again (downsampled)
+smooth_tail_x = rolling_average(tail_x,1,round(fps/down_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/down_fps),'median');
+smooth_nose_x = rolling_average(nose_x,1,round(fps/down_fps),'median');
+smooth_nose_y = rolling_average(nose_y,1,round(fps/down_fps),'median');
+smooth_rightear_x = rolling_average(rightear_x,1,round(fps/down_fps),'median');
+smooth_rightear_y = rolling_average(rightear_y,1,round(fps/down_fps),'median');
+smooth_leftear_x = rolling_average(leftear_x,1,round(fps/down_fps),'median');
+smooth_leftear_y = rolling_average(leftear_y,1,round(fps/down_fps),'median');
 smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
 smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
 smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
 smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
-smooth_body_x = rolling_average(smooth_body_x,1,round(fps/5),'median'); %downsample body to 5 Hz
-smooth_body_y = rolling_average(smooth_body_y,1,round(fps/5),'median');
 
 subplot(2,4,5)
 plot(corners_x,corners_y);
@@ -504,89 +507,159 @@ plot(corners_x,corners_y);
 hold on
 xlim(xlimits);
 ylim(ylimits)
-title('first 30 s trajectory')
-plot(smooth_body_x(1:fps*30),smooth_body_y(1:fps*30),'b','LineWidth',0.5);
+plotframes = min([num_frames 30*fps]);
+title(['first ' num2str(ceil(plotframes/fps)) ' s trajectory'])
+plot(smooth_body_x(1:plotframes),smooth_body_y(1:plotframes),'b','LineWidth',0.5);
 
-%calculate head direction
-headang_ears = atan2((smooth_rightear_y-smooth_leftear_y),(smooth_rightear_x-smooth_leftear_x))+pi/2;
-headang_lnose = atan2((smooth_nose_y-smooth_leftear_y),(smooth_nose_x-smooth_leftear_x))+pi/4;
-headang_rnose = atan2((smooth_nose_y-smooth_rightear_y),(smooth_nose_x-smooth_rightear_x))-pi/4;
-
-%get vector sum head direction (giving more weight to ears)
-vs_x = sum([2*cos(headang_ears) cos(headang_lnose) cos(headang_rnose)],2,'omitnan');
-vs_y = sum([2*sin(headang_ears) sin(headang_lnose) sin(headang_rnose)],2,'omitnan');
-
-%get smoother vector sum head angle (downsample to 10 fps
-smooth_vs_x = rolling_average(vs_x,1,round(fps/10),'median');
-smooth_vs_y = rolling_average(vs_y,1,round(fps/10),'median');
-smooth_headang = atan2(smooth_vs_y,smooth_vs_x);
-
-
-%% analyze results for detected objects
-%calculate direction of all objects to mouse head
-objects_ang = atan2((repmat(objects_y,[num_frames 1])-repmat(smooth_head_y,[1 num_objects])),(repmat(objects_x,[num_frames 1])-repmat(smooth_head_x,[1 num_objects])));
-objects_head_ang = get_angular_dist(objects_ang,repmat(smooth_headang,[1 num_objects]),'radians');
-angled_toward_objects = objects_head_ang<(pi/2);
-
-%calculate distances of mouse body to object edges
-full_obj_edge_x = repmat(permute(objects_edgepts_x,[3 1 2]),[num_frames 1 1]); %new format is: [num_frames num_objects num_object_edgepts]
-full_obj_edge_y = repmat(permute(objects_edgepts_y,[3 1 2]),[num_frames 1 1]);
-full_head_x = repmat(smooth_head_x,[1 num_objects 100]); %there are 100 possible object edgepoints (from pre-allocation)
-full_head_y = repmat(smooth_head_y,[1 num_objects 100]);
-objects_dist = get_dist(full_head_x,full_head_y, full_obj_edge_x, full_obj_edge_y);
-objects_dist = min(objects_dist,[],3,'omitnan'); %find closest edgepoint
-nearobjects = (objects_dist/pixels_per_meter)<nearobject_threshold; %format is [num_frames num_objects]
-verynearobjects = (objects_dist/pixels_per_meter)<verynearobject_threshold;
-
-%calculate near and verynear interactions (orientation towards + near or verynear)
-objects_nearinteract = nearobjects & angled_toward_objects;
-objects_verynearinteract = verynearobjects & angled_toward_objects;
-objects_nearinteraction_time = sum(objects_nearinteract)/fps;
-objects_verynearinteraction_time = sum(objects_verynearinteract)/fps; 
-
-
-%% calculate summary statistics
+%calculate movement summary
 steps = get_dist(smooth_body_x(1:end-1),smooth_body_y(1:end-1),smooth_body_x(2:end),smooth_body_y(2:end));
 distance_travelled = sum(abs(steps))/pixels_per_meter;
+total_time = num_frames/fps;
 
+
+%% calculate mouse distance to objects
+%use primary bodypart
+full_obj_edge_x = repmat(permute(objects_edgepts_x,[3 1 2]),[num_frames 1 1]);
+full_obj_edge_y = repmat(permute(objects_edgepts_y,[3 1 2]),[num_frames 1 1]);
+switch bodypart
+    case 'head'
+        bodypart_x = repmat(smooth_head_x,[1 num_objects 100]); %there are 100 possible object edgepoints (from pre-allocation)
+        bodypart_y = repmat(smooth_head_y,[1 num_objects 100]);
+        
+    case 'body'
+        bodypart_x = repmat(smooth_body_x,[1 num_objects 100]); 
+        bodypart_y = repmat(smooth_body_y,[1 num_objects 100]);
+        
+    case 'nose'
+        bodypart_x = repmat(smooth_nose_x,[1 num_objects 100]); 
+        bodypart_y = repmat(smooth_nose_y,[1 num_objects 100]);
+        
+    case 'tail'
+        bodypart_x = repmat(smooth_tail_x,[1 num_objects 100]);
+        bodypart_y = repmat(smooth_tail_y,[1 num_objects 100]);
+        
+    case 'head and tail' %first do head, then repeat for tail
+        bodypart_x = repmat(smooth_head_x,[1 num_objects 100]); 
+        bodypart_y = repmat(smooth_head_y,[1 num_objects 100]);
+end
+
+%calculate distance between mouse and nearest object edge
+objects_edge_dist = get_dist(bodypart_x, bodypart_y, full_obj_edge_x, full_obj_edge_y);
+objects_edge_dist = min(objects_edge_dist,[],3,'omitnan'); %find closest edgepoint
+
+switch bodypart
+    case 'head and tail' %repeat process for tail
+        bodypart_x = repmat(smooth_tail_x,[1 num_objects 100]); 
+        bodypart_y = repmat(smooth_tail_y,[1 num_objects 100]);
+        objects_edge_dist2 = get_dist(bodypart_x, bodypart_y, full_obj_edge_x, full_obj_edge_y);
+        objects_edge_dist2 = min(objects_edge_dist2,[],3,'omitnan'); %find closest edgepoint
+        objects_edge_dist(:,:,2) = objects_edge_dist2;
+        objects_edge_dist = max(objects_edge_dist,[],3,'omitnan'); %use bodypart that is farther away
+end
+
+%find timepoints where mouse is close to object
+close_to_objects = (objects_edge_dist/pixels_per_meter)<(close_threshold/100); %format is [num_frames num_objects]
+
+
+%% find timepoints where the mouse body is on top of each object
+on_top_of_objects = nan([num_frames num_objects]);
+for o = 1:num_objects
+    objects_mask = objects_label==o;
+    location_inds = sub2ind(size(objects_mask),round(smooth_body_y),round(smooth_body_x));
+    on_top_of_objects(:,o) = objects_mask(location_inds);
+end
+objects_ontopof_time = sum(on_top_of_objects,1,'omitnan')/fps;
+objects_ontopof_pct = 100*objects_ontopof_time/sum(objects_ontopof_time);
+
+
+%% calculate when mouse is oriented toward objects
+head_ang_ears = mod(atan2((smooth_rightear_y-smooth_leftear_y),(smooth_rightear_x-smooth_leftear_x))+pi/2,2*pi);
+head_ang_lnose = mod(atan2((smooth_nose_y-smooth_leftear_y),(smooth_nose_x-smooth_leftear_x))+pi/4,2*pi);
+head_ang_rnose = mod(atan2((smooth_nose_y-smooth_rightear_y),(smooth_nose_x-smooth_rightear_x))-pi/4,2*pi);
+
+%get vector sum head direction (giving more weight to ears)
+vs_x = sum([2*cos(head_ang_ears) cos(head_ang_lnose) cos(head_ang_rnose)],2,'omitnan');
+vs_y = sum([2*sin(head_ang_ears) sin(head_ang_lnose) sin(head_ang_rnose)],2,'omitnan');
+
+%get smoother vector sum head angle
+smooth_vs_x = rolling_average(vs_x,1,round(fps/down_fps),'median');
+smooth_vs_y = rolling_average(vs_y,1,round(fps/down_fps),'median');
+smooth_head_ang = mod(atan2(smooth_vs_y,smooth_vs_x),2*pi);
+
+%calculate direction of all objects to mouse head
+full_obj_center_x = repmat(objects_x,[num_frames 1]);
+full_obj_center_y = repmat(objects_y,[num_frames 1]);
+full_head_x = repmat(smooth_head_x,[1 num_objects]);
+full_head_y = repmat(smooth_head_y,[1 num_objects]);
+objects_ang = mod(atan2((full_obj_center_y-full_head_y),((full_obj_center_x-full_head_x))),2*pi);
+objects_head_ang = get_angular_dist(objects_ang,repmat(smooth_head_ang,[1 num_objects]),'radians'); %angle from straight ahead (from the mouse's perspective)
+angled_toward_objects = objects_head_ang<deg2rad(view_cone/2);
+
+
+%% calculate interactions
+objects_interaction = close_to_objects & angled_toward_objects & ~on_top_of_objects; %nice
+objects_interaction_time = sum(objects_interaction,1,'omitnan')/fps;
+objects_interaction_pct = 100*objects_interaction_time/sum(objects_interaction_time);
+
+
+%% summarize results
 results.number_of_frames = num_frames;
-results.assumed_camera_fps = fps;
-results.total_time_in_seconds = num_frames/fps;
+results.camera_fps = fps;
+results.downsampled_fps = down_fps;
+results.primary_bodypart = bodypart;
+results.view_cone = view_cone;
+results.close_threshold = close_threshold;
+results.total_time_in_seconds = total_time;
 results.distance_travelled_in_meters = distance_travelled;
 results.number_of_objects = num_objects;
-results.object_interaction_time_4cm = objects_nearinteraction_time;
-results.object_interaction_time_2cm = objects_verynearinteraction_time;
+results.object_interaction_time = objects_interaction_time;
+results.object_interaction_percent = objects_interaction_pct;
+results.object_ontopof_time = objects_ontopof_time;
+results.object_ontopof_percent = objects_ontopof_pct;
+results.object_detection.hl_ratio = hue_weight;
+results.object_detection.bkgd_fraction = bkgd_fraction;
+results.object_detection.zscore_threshold = zscore_threshold;
+results.object_detection.min_obj_size = min_obj_size;
+results.object_detection.med_filt = med_filt;
 
 %print results to figure
 subplot(2,4,3)
 set(gca,'Units','Normalized','Position',[0.6 0.05 0.4 0.95])
 axis off
-text(0,0.9,['Number of frames: ' num2str(results.number_of_frames)])
-text(0,0.82,['Assumed camera fps: ' num2str(results.assumed_camera_fps)])
-text(0,0.74,['Total time: ' num2str(results.total_time_in_seconds, '%.1f') ' s'])
-text(0,0.66,['Distance travelled: ' num2str(results.distance_travelled_in_meters, '%.1f') ' m'])
-text(0,0.58,'Object locations: ')
-text(0,0.53,['[' num2str(1:num_objects) ']'],'FontSize',8)
-text(0,0.45,'Time interacting with objects - within 4 cm: ')
-text(0,0.40,['[' num2str(results.object_interaction_time_4cm, '%.1f  ') '] s,   [' num2str(round(1000*results.object_interaction_time_4cm/results.total_time_in_seconds)/10,'%.1f  ') '] %']);
-text(0,0.32,'Time interacting with objects - within 2 cm: ')
-text(0,0.27,['[' num2str(results.object_interaction_time_2cm, '%.1f  ') '] s,   [' num2str(round(1000*results.object_interaction_time_2cm/results.total_time_in_seconds)/10, '%.1f  ') '] %']);
+text(0,0.95,['Number of frames: ' num2str(num_frames)])
+text(0,0.88,['Camera fps: ' num2str(fps)])
+text(0,0.81,['Downsampled fps: ' num2str(down_fps)])
+text(0,0.74,['Primary bodypart: ' bodypart])
+text(0,0.67,['View cone angle: ' num2str(view_cone) ' deg'])
+text(0,0.60,['Close threshold: ' num2str(close_threshold) ' cm'])
+text(0,0.53,['Total time: ' num2str(total_time, '%.1f') ' s'])
+text(0,0.46,['Distance travelled: ' num2str(distance_travelled, '%.1f') ' m'])
+text(0,0.39,'Object labels: ')
+text(0,0.34,['[' num2str(1:num_objects) ']'],'FontSize',8)
+text(0,0.27,'Time interacting with objects: ')
+text(0,0.22,['[' num2str(objects_interaction_time, '%.1f  ') '] s,   [' num2str(objects_interaction_pct,'%.1f  ') '] %']);
+text(0,0.15,'Time on top of objects: ')
+text(0,0.10,['[' num2str(objects_ontopof_time, '%.1f  ') '] s,   [' num2str(objects_ontopof_pct,'%.1f  ') '] %']);
 
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
 
 %write custom xls file of results
-C = cell(4,2);
-C(:,1) = {'number of frames', 'assumed camera fps', 'total time (s)', 'distance travelled (m)'};
-C(:,2) = {num_frames, fps, results.total_time_in_seconds, distance_travelled};
+C = cell(8,2);
+C(:,1) = {'number of frames', 'camera fps', 'downsampled fps', 'primary bodypart', 'view cone angle (deg)', 'close threshold (cm)', 'total time (s)', 'distance travelled (m)'};
+C(:,2) = {num_frames, fps, down_fps, bodypart, view_cone, close_threshold, total_time, distance_travelled};
 writecell(C,[output_filename '.xls'],'Range','A1');
+
+C = cell(5,2);
+C(:,1) = {'h-l ratio', 'background fraction', 'z-score threshold', 'minimum object size (cm)', 'median filter (cm)'};
+C(:,2) = {hue_weight, bkgd_fraction, zscore_threshold, min_obj_size, med_filt};
+writecell(C,[output_filename '.xls'],'Range','D1');
+
 C = cell(5,1+num_objects);
-C(:,1) = {'object location', 'Time interacting with objects - within 4 cm (s)', ...
-    'Time interacting with objects - within 4 cm (%)', 'Time interacting with objects - within 2 cm (s)', ...
-    'Time interacting with objects - within 2 cm (%)'};
+C(:,1) = {'object labels', 'Time interacting with objects (s)', 'Time interacting with objects (%)', 'Time on top of objects (s)', 'Time on top of objects (%)'};
 C(1,2:1+num_objects) = num2cell(1:num_objects);
-C(2,2:1+num_objects) = num2cell(results.object_interaction_time_4cm);
-C(3,2:1+num_objects) = num2cell(100*results.object_interaction_time_4cm/results.total_time_in_seconds);
-C(4,2:1+num_objects) = num2cell(results.object_interaction_time_2cm);
-C(5,2:1+num_objects) = num2cell(100*results.object_interaction_time_2cm/results.total_time_in_seconds);
-writecell(C,[output_filename '.xls'],'Range','A6');
+C(2,2:1+num_objects) = num2cell(objects_interaction_time);
+C(3,2:1+num_objects) = num2cell(objects_interaction_pct);
+C(4,2:1+num_objects) = num2cell(objects_ontopof_time);
+C(5,2:1+num_objects) = num2cell(objects_ontopof_pct);
+writecell(C,[output_filename '.xls'],'Range','A10');

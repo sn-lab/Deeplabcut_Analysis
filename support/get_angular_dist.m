@@ -25,8 +25,9 @@ end
 angle1 = mod(angle1,fullcircle);
 angle2 = mod(angle2,fullcircle);
 
-%calculate distance between the 2 angles (or arrays of angles)
-angular_dist = angle1-angle2;
+%calculate the absolute difference between the 2 angles (or arrays of angles)
+angular_dist = abs(angle1-angle2);
 
-%if the distance between 2 angles is >halfcircle, then it's closer in the other direction
-angular_dist(angular_dist>halfcircle) = fullcircle - angular_dist(angular_dist>halfcircle);
+%if the distance between 2 angles is >halfcircle, then they're closer in the other direction
+closer_the_other_way = angular_dist>halfcircle;
+angular_dist(closer_the_other_way) = fullcircle - angular_dist(closer_the_other_way);

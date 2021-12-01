@@ -31,7 +31,7 @@ assert(dsize(dim)>2,'data array is not large enough along the chosen dimension')
 assert(rem(window_size,1)==0,'window_size must be an integer')
 assert(window_size>=0,'window_size must be a positive integer')
 
-if window_size>1 %window_size=0,1 will be ignored
+if window_size>1 %window_sizes of 0 or 1 will be ignored
     %change the data arry dimensions so that rolling average is performed on
     %the 1st dimension, and the 2nd dimensions is unused (singleton)
     order = dims;

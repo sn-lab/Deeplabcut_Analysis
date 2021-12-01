@@ -1,5 +1,5 @@
-function analyze_ymaze(h5_filename)
-% FUNCTION analyze_ymaze(h5_filename)
+function analyze_ymaze(h5_filename, param)
+% FUNCTION analyze_ymaze(h5_filename, param)
 %
 % analyzes h5 files output from deeplabcut tracking of Y-maze videos using 
 % the "Ymaze_2" training dataset. Analysis includes plotting the summary of 
@@ -8,13 +8,29 @@ function analyze_ymaze(h5_filename)
 %
 %INPUTS
 %h5_filename: full path/filename of a h5 file to analyze
+%param (optional):
+%     fps = framerate of the original video recordings
+%     down_fps = effective fps after rolling average performed to remove some tracking errors
+%     bodypart = bodypart to use for distance measurements (e.g. mouse-arm distance)
+%     arm_threshold = minimum distance (cm) down arm a mouse bodypart has to be to count as in that arm
 
-fps = 30;
+if nargin<2
+    %set default parameters
+    fps = 30; %framerate of the original video recordings
+    down_fps = 10; %effective fps after rolling average performed to remove some tracking errors
+    bodypart = 'head'; %bodypart to use for distance measurements (e.g. mouse-arm distance)
+    arm_threshold = 8; %minimum distance (cm) down arm a mouse bodypart has to be to count as in that arm
+else
+    fps = param.fps;
+    down_fps = param.down_fps;
+    bodypart = param.bodypart;
+    arm_threshold = param.arm_threshold;
+end
+
 arm_length_in_meters = 0.365;
-armnotch_length = 0.0762;
 arm_width_in_meters = 0.07; 
 figure_size = [10 10 25 10];
-insidearm_threshold_fraction = (arm_length_in_meters-armnotch_length)/arm_length_in_meters; %how close to the center a mouse can be and still be identified as in an arm
+insidearm_threshold_fraction = (arm_length_in_meters-(arm_threshold/100))/arm_length_in_meters; %how close to the center a mouse can be and still be identified as in an arm
 
 %load tracking data
 [save_dir, filename, ~] = fileparts(h5_filename);
@@ -169,12 +185,15 @@ mouse_size_in_pixels = median(get_dist(nose_x,nose_y,tail_x,tail_y),'omitnan');
 
 %% delete all mouse tracking that's too far from the mouse's estimated position
 %create a time-smoothed, body-center estimate
+verysmooth_fps = 5;
 head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
 head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
-body_x =  mean([head_x tail_x],2,'omitnan');
-body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/verysmooth_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/verysmooth_fps),'median');
+smooth_head_x = rolling_average(head_x,1,round(fps/verysmooth_fps),'median');
+smooth_head_y = rolling_average(head_y,1,round(fps/verysmooth_fps),'median');
+smooth_body_x = mean([smooth_head_x smooth_tail_x],2,'omitnan');
+smooth_body_y = mean([smooth_head_y smooth_tail_y],2,'omitnan');
 
 %find all mouse labels that are very far from the body center estimate, and nan them
 dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
@@ -198,17 +217,23 @@ tail_x(too_far_idx) = nan;
 tail_y(too_far_idx) = nan;
 
 %% estimate the mouse's body position again
-head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
-head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
-body_x =  mean([head_x tail_x],2,'omitnan');
-body_y =  mean([head_y tail_y],2,'omitnan');
-smooth_body_x = rolling_average(body_x,1,round(fps/5),'median');
-smooth_body_y = rolling_average(body_y,1,round(fps/5),'median');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/down_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/down_fps),'median');
+smooth_nose_x = rolling_average(nose_x,1,round(fps/down_fps),'median');
+smooth_nose_y = rolling_average(nose_y,1,round(fps/down_fps),'median');
+smooth_rightear_x = rolling_average(rightear_x,1,round(fps/down_fps),'median');
+smooth_rightear_y = rolling_average(rightear_y,1,round(fps/down_fps),'median');
+smooth_leftear_x = rolling_average(leftear_x,1,round(fps/down_fps),'median');
+smooth_leftear_y = rolling_average(leftear_y,1,round(fps/down_fps),'median');
+smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
+smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
+smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
+smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
 
 subplot(2,4,5)
 plot(mazeends_x,mazeends_y);
 hold on
-scatter(body_x,body_y,1,[0 0 1]);%colors)
+scatter(smooth_body_x,smooth_body_y,1,[0 0 1]);%colors)
 xlim(xlimits);
 ylim(ylimits)
 title('all mouse body positions')
@@ -218,18 +243,51 @@ subplot(2,4,6)
 hold on
 xlim(xlimits);
 ylim(ylimits)
-title('first 30 s trajectory')
-plot(body_x(1:fps*30),body_y(1:fps*30),'b','LineWidth',0.5);
+plotframes = min([num_frames 30*fps]);
+title(['first ' num2str(ceil(plotframes/fps)) ' s trajectory'])
+plot(smooth_body_x(1:plotframes),smooth_body_y(1:plotframes),'b','LineWidth',0.5);
 
 %% calculate results
 %calculate mouse distance from 3 arms
-leftarm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(leftarm_x,[num_frames 1]), repmat(leftarm_y,[num_frames 1]));
-rightarm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(rightarm_x,[num_frames 1]), repmat(rightarm_y,[num_frames 1]));
-middlearm_dist = get_dist(smooth_body_x, smooth_body_y, repmat(middlearm_x,[num_frames 1]), repmat(middlearm_y,[num_frames 1]));
+num_arms = 3;
+full_arms_x = repmat([leftarm_x middlearm_x rightarm_x],[num_frames 1]);
+full_arms_y = repmat([leftarm_y middlearm_y rightarm_y],[num_frames 1]);
+switch bodypart
+    case 'head'
+        bodypart_x = repmat(smooth_head_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_head_y,[1 num_arms]);
+        arm_dists = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        
+    case 'body'
+        bodypart_x = repmat(smooth_body_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_body_y,[1 num_arms]);
+        arm_dists = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        
+    case 'nose'
+        bodypart_x = repmat(smooth_nose_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_nose_y,[1 num_arms]);
+        arm_dists = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        
+    case 'tail'
+        bodypart_x = repmat(smooth_tail_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_tail_y,[1 num_arms]);
+        arm_dists = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        
+    case 'head and tail'
+        bodypart_x = repmat(smooth_head_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_head_y,[1 num_arms]);
+        arm_dists1 = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        bodypart_x = repmat(smooth_tail_x,[1 num_arms]);
+        bodypart_y = repmat(smooth_tail_y,[1 num_arms]);
+        arm_dists2 = get_dist(bodypart_x, bodypart_y, full_arms_x, full_arms_y);
+        arm_dists(:,:,1) = arm_dists1;
+        arm_dists(:,:,2) = arm_dists2;
+        arm_dists = max(arm_dists,[],3,'omitnan'); %which bodypart is farther away
+end
 
-inleft = (leftarm_dist/leftarm_length)<insidearm_threshold_fraction;
-inright = (rightarm_dist/rightarm_length)<insidearm_threshold_fraction;
-inmiddle = (middlearm_dist/middlearm_length)<insidearm_threshold_fraction;
+inleft = (arm_dists(:,1)/leftarm_length)<insidearm_threshold_fraction;
+inmiddle = (arm_dists(:,2)/middlearm_length)<insidearm_threshold_fraction;
+inright = (arm_dists(:,3)/rightarm_length)<insidearm_threshold_fraction;
 inmultiple = inleft&inright | inleft&inmiddle | inright&inmiddle;
 
 inleft(inmultiple) = 0;
@@ -256,10 +314,14 @@ spontaneous_alternation_percent = 100*num_alternations/(num_arm_entries-2);
 
 steps = get_dist(smooth_body_x(1:end-1),smooth_body_y(1:end-1),smooth_body_x(2:end),smooth_body_y(2:end));
 distance_travelled = sum(abs(steps),'omitnan')/pixels_per_meter;
+total_time = num_frames/fps;
 
 results.number_of_frames = num_frames;
-results.assumed_camera_fps = fps;
-results.total_time_in_seconds = num_frames/fps;
+results.camera_fps = fps;
+results.downsampled_fps = down_fps;
+results.primary_bodypart = bodypart;
+results.arm_threshold = arm_threshold;
+results.total_time_in_seconds = total_time;
 results.distance_travelled_in_meters = distance_travelled;
 results.location_names = {'left arm (1)','right arm (2)','middle arm (3)','center (0)'};
 results.seconds_in_locations = time_in_locations;
@@ -274,32 +336,35 @@ results.spontaneous_alternation_percent = spontaneous_alternation_percent;
 subplot(2,4,3)
 set(gca,'Units','Normalized','Position',[0.6 0.05 0.4 0.95])
 axis off
-text(0,0.9,['Number of frames: ' num2str(results.number_of_frames)])
-text(0,0.82,['Assumed camera fps: ' num2str(results.assumed_camera_fps)])
-text(0,0.74,['Total time: ' num2str(results.total_time_in_seconds, '%.1f') ' s'])
-text(0,0.66,['Distance travelled: ' num2str(results.distance_travelled_in_meters, '%.1f') ' m'])
-text(0,0.58,'Names of locations: ')
-text(0,0.53,['[' cell2str(results.location_names) ']'],'FontSize',8)
-text(0,0.45,'Time in locations: ')
-text(0,0.4,['[' num2str(results.seconds_in_locations, '%.1f  ') '] s'])
-text(0,0.32,['Number of arm entries: ' num2str(results.number_of_arm_entries)])
-text(0,0.24,'Sequence of arm entries: ')
-text(0,0.19,num2str(results.sequence_of_arm_entries),'FontSize',7)
-text(0,0.11,['Number of alternations: ' num2str(results.number_of_alternations)])
-text(0,0.03,['Spontaneous alternation: ' num2str(results.spontaneous_alternation_percent, '%.1f') ' %'])
+text(0,0.95,['Number of frames: ' num2str(num_frames)])
+text(0,0.89,['Camera fps: ' num2str(fps)])
+text(0,0.83,['Downsampled fps: ' num2str(down_fps)])
+text(0,0.77,['Primary bodypart: ' bodypart])
+text(0,0.71,['Arm threshold: ' num2str(arm_threshold) ' cm'])
+text(0,0.65,['Total time: ' num2str(total_time, '%.1f') ' s'])
+text(0,0.59,['Distance travelled: ' num2str(distance_travelled, '%.1f') ' m'])
+text(0,0.53,'Names of locations: ')
+text(0,0.48,['[' cell2str(results.location_names) ']'],'FontSize',8)
+text(0,0.42,'Time in locations: ')
+text(0,0.37,['[' num2str(time_in_locations, '%.1f  ') '] s'])
+text(0,0.31,['Number of arm entries: ' num2str(num_arm_entries)])
+text(0,0.25,'Sequence of arm entries: ')
+text(0,0.20,num2str(sequence_of_arm_entries'),'FontSize',7)
+text(0,0.14,['Number of alternations: ' num2str(num_alternations)])
+text(0,0.08,['Spontaneous alternation: ' num2str(spontaneous_alternation_percent, '%.1f') ' %'])
 
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
 
 %write custom xls file of results
-C = cell(7,2);
-C(:,1) = {'number of frames', 'assumed camera fps', 'total time (s)', 'distance travelled (m)', 'number of arm entries', 'number of alternations', 'spontaneous alternation (%)'};
-C(:,2) = {num_frames, fps, num_frames/fps, distance_travelled, num_arm_entries, num_alternations, spontaneous_alternation_percent};
+C = cell(10,2);
+C(:,1) = {'number of frames', 'camera fps', 'downsampled fps', 'primary bodypart', 'arm threshold', 'total time (s)', 'distance travelled (m)', 'number of arm entries', 'number of alternations', 'spontaneous alternation (%)'};
+C(:,2) = {num_frames, fps, down_fps, bodypart, arm_threshold, total_time, distance_travelled, num_arm_entries, num_alternations, spontaneous_alternation_percent};
 writecell(C,[output_filename '.xls'],'Range','A1');
 C = cell(2,5);
 C(:,1) = {'location name', 'time in location (s)'};
 C(1,2:5) = {results.location_names{1}, results.location_names{2}, results.location_names{3}, results.location_names{4}};
-C(2,2:5) = {results.seconds_in_locations(1), results.seconds_in_locations(2), results.seconds_in_locations(3), results.seconds_in_locations(4)};
-writecell(C,[output_filename '.xls'],'Range','A9');
-writecell({'sequence of arm entries'},[output_filename '.xls'],'Range','A12');
-writecell({sequence_of_arm_entries},[output_filename '.xls'],'Range','B12');
+C(2,2:5) = {time_in_locations(1), time_in_locations(2), time_in_locations(3), time_in_locations(4)};
+writecell(C,[output_filename '.xls'],'Range','A12');
+writecell({'sequence of arm entries'},[output_filename '.xls'],'Range','A15');
+writecell({sequence_of_arm_entries},[output_filename '.xls'],'Range','B15');
