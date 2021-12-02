@@ -616,6 +616,7 @@ results.object_interaction_time = objects_interaction_time;
 results.object_interaction_percent = objects_interaction_pct;
 results.object_ontopof_time = objects_ontopof_time;
 results.object_ontopof_percent = objects_ontopof_pct;
+results.object_interaction_vectors = objects_interaction;
 results.object_detection.hl_ratio = hue_weight;
 results.object_detection.bkgd_fraction = bkgd_fraction;
 results.object_detection.zscore_threshold = zscore_threshold;
