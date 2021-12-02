@@ -1,0 +1,133 @@
+<deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
+  <configuration file="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\deeplabcut_analysis.prj" location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone" name="deeplabcut_analysis" preferred-package-location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+    <param.appname>deeplabcut_analysis</param.appname>
+    <param.icon />
+    <param.icons />
+    <param.version>1.0</param.version>
+    <param.authnamewatermark>Matthew Isaacson</param.authnamewatermark>
+    <param.email>mdi22@cornell.edu</param.email>
+    <param.company>Cornell University</param.company>
+    <param.summary>A MATLAB app to analyze .h5 tracking files from videos processed through either the "YMaze" or "BehaviorBox" DeepLabCut trained networks</param.summary>
+    <param.description># deeplabcut_analysis
+
+A MATLAB app to analyze .h5 tracking files from videos processed through either the "YMaze" or "BehaviorBox" DeepLabCut trained networks (which can be downloaded here: https://cornell.box.com/s/wq6kjvpou3k9713ovjpwnh1ghhqiz0ww). More info on DeepLabCut is available here: https://deeplabcut.github.io/DeepLabCut/docs/intro.html
+
+This .app can either be run on computers with MATLAB installed (using the .mlapp file) or on computers which don't (using the .exe file). In order to use the .exe file on computers without MATLAB installed, first download and install the free MATLAB runtime here: https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html
+
+This app simply functions to load a list of .h5 files to analyze, checks their compatibility with the selected analysis type, and processes each file through the appropriate analysis script, according to the analysis parameters specified within the app. For each type of analysis, a specific script is used which loads the appropriate tracking labels, cleans up the dataset, and processes/plots the results in the desired way. These are the analysis types currently included in the app:
+
+1. Y-maze test for spontaneous alternation
+2. Open-field test for anxiety-like behaviors (i.e. staying close to walls)
+3. Object-recognition test to quantify mouse interactions to detected objects (for each .h5 file, the original .avi video file must be in the same path and have the same base filename -- see examples)</param.description>
+    <param.screenshot />
+    <param.guid />
+    <param.installpath.string>\Cornell University\deeplabcut_analysis\</param.installpath.string>
+    <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
+    <param.logo />
+    <param.install.notes />
+    <param.target.install.notes />
+    <param.intermediate>${PROJECT_ROOT}</param.intermediate>
+    <param.files.only>${PROJECT_ROOT}</param.files.only>
+    <param.output>${PROJECT_ROOT}</param.output>
+    <param.logdir>${PROJECT_ROOT}</param.logdir>
+    <param.enable.clean.build>false</param.enable.clean.build>
+    <param.user.defined.mcr.options />
+    <param.target.type>subtarget.standalone</param.target.type>
+    <param.support.packages />
+    <param.web.mcr>true</param.web.mcr>
+    <param.package.mcr>false</param.package.mcr>
+    <param.no.mcr>false</param.no.mcr>
+    <param.web.mcr.name>MyAppInstaller_web</param.web.mcr.name>
+    <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
+    <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
+    <param.windows.command.prompt>true</param.windows.command.prompt>
+    <param.create.log>false</param.create.log>
+    <param.log.file />
+    <param.native.matlab>false</param.native.matlab>
+    <param.checkbox>false</param.checkbox>
+    <param.example />
+    <param.help.text>Syntax 
+	  -? 
+	 
+ Input Arguments 
+	 -?  print help on how to use the application 
+	 input arguments</param.help.text>
+    <unset>
+      <param.icon />
+      <param.icons />
+      <param.version />
+      <param.screenshot />
+      <param.guid />
+      <param.installpath.string />
+      <param.installpath.combo />
+      <param.logo />
+      <param.install.notes />
+      <param.target.install.notes />
+      <param.enable.clean.build />
+      <param.user.defined.mcr.options />
+      <param.target.type />
+      <param.support.packages />
+      <param.web.mcr />
+      <param.package.mcr />
+      <param.no.mcr />
+      <param.web.mcr.name />
+      <param.package.mcr.name />
+      <param.no.mcr.name />
+      <param.windows.command.prompt />
+      <param.create.log />
+      <param.log.file />
+      <param.native.matlab />
+      <param.checkbox />
+      <param.example />
+    </unset>
+    <fileset.main>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\deeplabcut_analysis.mlapp</file>
+    </fileset.main>
+    <fileset.resources>
+      <file>${PROJECT_ROOT}\deeplabcut_analysis.mlapp</file>
+    </fileset.resources>
+    <fileset.package />
+    <fileset.depfun>
+      <file>C:\Users\misaa\Documents\GitHub\CaImAn-MATLAB\utilities\cell2str.m</file>
+      <file>${PROJECT_ROOT}\scripts\analyze_objectinteraction.m</file>
+      <file>${PROJECT_ROOT}\scripts\analyze_openfield.m</file>
+      <file>${PROJECT_ROOT}\scripts\analyze_ymaze.m</file>
+      <file>${PROJECT_ROOT}\support\get_angular_dist.m</file>
+      <file>${PROJECT_ROOT}\support\get_dist.m</file>
+      <file>${PROJECT_ROOT}\support\rolling_average.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\draw_ROIs\support\linspecer.m</file>
+    </fileset.depfun>
+    <build-deliverables>
+      <file location="${PROJECT_ROOT}" name="readme.txt" optional="true">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\readme.txt</file>
+      <file location="${PROJECT_ROOT}" name="splash.png" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\splash.png</file>
+      <file location="${PROJECT_ROOT}" name="deeplabcut_analysis.exe" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\deeplabcut_analysis.exe</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>C:\Program Files\MATLAB\R2021a</root>
+      <toolboxes>
+        <toolbox name="neuralnetwork" />
+      </toolboxes>
+      <toolbox>
+        <neuralnetwork>
+          <enabled>true</enabled>
+        </neuralnetwork>
+      </toolbox>
+    </matlab>
+    <platform>
+      <unix>false</unix>
+      <mac>false</mac>
+      <windows>true</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>false</linux>
+      <solaris>false</solaris>
+      <osver>10.0</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>win64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>

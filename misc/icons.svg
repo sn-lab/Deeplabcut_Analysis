@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="icons.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="3.3501054"
+     inkscape:cx="350.73524"
+     inkscape:cy="342.52654"
+     inkscape:window-width="2256"
+     inkscape:window-height="1415"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <rect
+       x="94.325392"
+       y="245.66392"
+       width="138.8016"
+       height="102.68334"
+       id="rect13727" />
+    <rect
+       x="92.112186"
+       y="64.010163"
+       width="441.82625"
+       height="64.010163"
+       id="rect5151" />
+    <rect
+       x="92.112183"
+       y="64.010162"
+       width="441.82626"
+       height="64.010162"
+       id="rect5151-1" />
+    <rect
+       x="92.112183"
+       y="64.010162"
+       width="441.82626"
+       height="64.010162"
+       id="rect5151-9" />
+    <rect
+       x="92.112183"
+       y="64.010162"
+       width="441.82626"
+       height="64.010162"
+       id="rect5151-9-1" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#000000;stroke-width:0.165863;fill-opacity:1"
+       id="rect1122"
+       width="50"
+       height="50"
+       x="18.175243"
+       y="46.264256" />
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,-39.873824,32.481104)"
+       id="text5149"
+       style="font-style:normal;font-weight:normal;font-size:26.6667px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect5151);fill:#ffffff;fill-opacity:1;stroke:none"
+       x="81.679787"
+       y="0"><tspan
+         x="230.46572"
+         y="88.338605"
+         id="tspan34762"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle"
+           id="tspan34760">deeplabcut</tspan></tspan></text>
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke-width:0.165863"
+       id="rect1122-1"
+       width="50"
+       height="50"
+       x="73.327133"
+       y="46.158833" />
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,15.278064,32.37568)"
+       id="text5149-6"
+       style="font-style:normal;font-weight:normal;font-size:26.6667px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect5151-1);fill:#ffffff;fill-opacity:1;stroke:none"
+       x="81.679787"
+       y="0"><tspan
+         x="230.46572"
+         y="88.338605"
+         id="tspan34766"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle"
+           id="tspan34764">deeplabcut</tspan></tspan></text>
+    <rect
+       style="fill:#ad6060;fill-opacity:1;stroke-width:0.26194"
+       id="rect26523-3"
+       width="30"
+       height="30"
+       x="83.346893"
+       y="62.523823" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke-width:0.165863"
+       id="rect1122-0"
+       width="50"
+       height="50"
+       x="129.63817"
+       y="45.921898" />
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,71.589104,32.138747)"
+       id="text5149-4"
+       style="font-style:normal;font-weight:normal;font-size:26.6667px;line-height:1.25;font-family:sans-serif;text-align:center;white-space:pre;shape-inside:url(#rect5151-9);fill:#ffffff;fill-opacity:1;stroke:none"
+       x="163.35957"
+       y="0"><tspan
+         x="230.46572"
+         y="88.338605"
+         id="tspan34770"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34768">deeplabcut
+</tspan></tspan><tspan
+         x="313.02441"
+         y="121.67198"
+         id="tspan34774"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34772">
+</tspan></tspan><tspan
+         x="92.111328"
+         y="152.34837"
+         id="tspan34778"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34776">
+</tspan></tspan><tspan
+         x="92.111328"
+         y="185.68175"
+         id="tspan34782"><tspan
+           dx="0 17.812523"
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34780">an</tspan></tspan></text>
+    <rect
+       style="fill:#bdbdbd;fill-opacity:1;stroke-width:0.365887"
+       id="rect26523-5"
+       width="50"
+       height="35.120579"
+       x="129.63817"
+       y="60.801323" />
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,71.739617,55.363917)"
+       id="text5149-4-5"
+       style="font-style:normal;font-weight:normal;font-size:26.6667px;line-height:1.25;font-family:sans-serif;text-align:center;white-space:pre;shape-inside:url(#rect5151-9-1);fill:#000000;fill-opacity:1;stroke:none"
+       x="163.35957"
+       y="0"><tspan
+         x="252.09986"
+         y="88.338605"
+         id="tspan34786"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34784">analysis
+</tspan></tspan><tspan
+         x="313.02441"
+         y="121.67198"
+         id="tspan34790"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34788">
+</tspan></tspan><tspan
+         x="92.111328"
+         y="152.34837"
+         id="tspan34794"><tspan
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34792">
+</tspan></tspan><tspan
+         x="92.111328"
+         y="185.68175"
+         id="tspan34798"><tspan
+           dx="0 17.812523"
+           style="font-weight:bold;-inkscape-font-specification:'sans-serif Bold'"
+           id="tspan34796">an</tspan></tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.297268"
+       id="rect34410"
+       width="4.8176341"
+       height="19.976028"
+       x="40.752445"
+       y="71.243118" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.264999"
+       id="rect34410-9"
+       width="4.8176341"
+       height="15.8745"
+       x="83.214378"
+       y="-17.62958"
+       transform="rotate(59.975871)" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.264999"
+       id="rect34410-9-0"
+       width="4.8176341"
+       height="15.8745"
+       x="40.129204"
+       y="-72.920227"
+       transform="rotate(119.94291)" />
+  </g>
+</svg>
