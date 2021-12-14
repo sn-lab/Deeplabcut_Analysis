@@ -32,13 +32,14 @@ assert(rem(window_size,1)==0,'window_size must be an integer')
 assert(window_size>=0,'window_size must be a positive integer')
 
 if window_size>1 %window_sizes of 0 or 1 will be ignored
-    %change the data arry dimensions so that rolling average is performed on
+    %change the data array dimensions so that rolling average is performed on
     %the 1st dimension, and the 2nd dimensions is unused (singleton)
     order = dims;
-    order(dim) = 1;
-    order(1) = dim;
-    order(2) = ndims+1;
-    order(ndims+1) = 2;
+    if ndims>1
+        order(dim) = 1;
+        order(1) = dim;
+        order = [order(1) ndims+1 order(2:end)];
+    end
     data = permute(data,order);
 
     %perform rolling average by shifting data forward/backward half of the
@@ -71,6 +72,10 @@ if window_size>1 %window_sizes of 0 or 1 will be ignored
     end
 
     %change data array dimensions back to original
-    data = permute(data,order);
+    reverse_order = order;
+    reverse_order(2) = []; %take out unused dimension
+    reverse_order(1) = dim; %switch dim back to original position
+    reverse_order(dim) = 1;
+    data = permute(data,reverse_order);
 end
     

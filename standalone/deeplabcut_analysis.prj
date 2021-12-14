@@ -1,9 +1,9 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration file="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\deeplabcut_analysis.prj" location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone" name="deeplabcut_analysis" preferred-package-location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration file="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\deeplabcut_analysis.prj" location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone" name="deeplabcut_analysis" preferred-package-location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>deeplabcut_analysis</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.0</param.version>
+    <param.version>1.1</param.version>
     <param.authnamewatermark>Matthew Isaacson</param.authnamewatermark>
     <param.email>mdi22@cornell.edu</param.email>
     <param.company>Cornell University</param.company>
@@ -19,7 +19,7 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
 1. Y-maze test for spontaneous alternation
 2. Open-field test for anxiety-like behaviors (i.e. staying close to walls)
 3. Object-recognition test to quantify mouse interactions to detected objects (for each .h5 file, the original .avi video file must be in the same path and have the same base filename -- see examples)</param.description>
-    <param.screenshot />
+    <param.screenshot>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\misc\analysis.png</param.screenshot>
     <param.guid />
     <param.installpath.string>\Cornell University\deeplabcut_analysis\</param.installpath.string>
     <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
@@ -55,8 +55,6 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
     <unset>
       <param.icon />
       <param.icons />
-      <param.version />
-      <param.screenshot />
       <param.guid />
       <param.installpath.string />
       <param.installpath.combo />
@@ -81,7 +79,7 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
       <param.example />
     </unset>
     <fileset.main>
-      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\deeplabcut_analysis.mlapp</file>
+      <file>${PROJECT_ROOT}\deeplabcut_analysis.mlapp</file>
     </fileset.main>
     <fileset.resources>
       <file>${PROJECT_ROOT}\deeplabcut_analysis.mlapp</file>
@@ -89,18 +87,18 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
     <fileset.package />
     <fileset.depfun>
       <file>C:\Users\misaa\Documents\GitHub\CaImAn-MATLAB\utilities\cell2str.m</file>
-      <file>${PROJECT_ROOT}\scripts\analyze_objectinteraction.m</file>
-      <file>${PROJECT_ROOT}\scripts\analyze_openfield.m</file>
-      <file>${PROJECT_ROOT}\scripts\analyze_ymaze.m</file>
-      <file>${PROJECT_ROOT}\support\get_angular_dist.m</file>
-      <file>${PROJECT_ROOT}\support\get_dist.m</file>
-      <file>${PROJECT_ROOT}\support\rolling_average.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_objectinteraction.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_openfield.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_ymaze.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\get_angular_dist.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\get_dist.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\rolling_average.m</file>
       <file>C:\Users\misaa\Documents\GitHub\draw_ROIs\support\linspecer.m</file>
     </fileset.depfun>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}" name="readme.txt" optional="true">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\readme.txt</file>
-      <file location="${PROJECT_ROOT}" name="splash.png" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\splash.png</file>
-      <file location="${PROJECT_ROOT}" name="deeplabcut_analysis.exe" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalaone\deeplabcut_analysis.exe</file>
+      <file location="${PROJECT_ROOT}" name="splash.png" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\splash.png</file>
+      <file location="${PROJECT_ROOT}" name="deeplabcut_analysis.exe" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\deeplabcut_analysis.exe</file>
+      <file location="${PROJECT_ROOT}" name="readme.txt" optional="true">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\readme.txt</file>
     </build-deliverables>
     <workflow />
     <matlab>

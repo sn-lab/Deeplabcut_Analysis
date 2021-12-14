@@ -75,7 +75,7 @@ colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x
 avi_filename = [output_filename '.avi'];
 assert(exist(avi_filename,'file')==2,['Cannot find avi file associated with the h5 file. ',...
     'Make sure the original video file is in the same folder as the h5 file, and shares',...
-    ' the same filename before "DeepCut" (e.g. video1.avi and video1DeepCut_resnet....h5']);
+    ' the same filename before "DeepCut" (e.g. video1.avi and video1DeepCutAp....h5']);
 v = VideoReader(avi_filename);
 time_incr = v.Duration/100;
 sample_frame_times = 0:time_incr:v.Duration;
