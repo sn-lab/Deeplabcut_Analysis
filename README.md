@@ -32,27 +32,27 @@ It is possible to train new networks and still use this app, but there are speci
 ### Requirements for the ymaze analysis type
 In the config.yaml file of a new DLC network, these are the names and labels that must be used verbatim:
 >Task: YMaze
-bodyparts:
-- rightarm
-- leftarm
-- middlearm
-- rightear
-- leftear
-- nose
-- tailbase
+>bodyparts:
+>- rightarm
+>- leftarm
+>- middlearm
+>- rightear
+>- leftear
+>- nose
+>- tailbase
 
 ### Requirements for the open field and object interaction analysis types
 In the config.yaml file of a new DLC network, this is the task name and labels that must be used verbatim:
-Task: BehaviorBox
-bodyparts:
-- toprightcorner
-- topleftcorner
-- botleftcorner
-- botrightcorner
-- rightear
-- leftear
-- nose
-- tailbase
+>Task: BehaviorBox
+>bodyparts:
+>- toprightcorner
+>- topleftcorner
+>- botleftcorner
+>- botrightcorner
+>- rightear
+>- leftear
+>- nose
+>- tailbase
 
 ## what if my DeepLabCut network doesn't conform to the requirements listed above?
 For networks that are incompatible with the current analysis scripts of the app (e.g. if different bodyparts have to be labelled than the ones listed above), a new analysis script would have to be written and incorporated in various places in the app. Create a [new issue](https://github.com/sn-lab/Deeplabcut_Analysis/issues) to request a new analysis type, and we'll see what we can do.
