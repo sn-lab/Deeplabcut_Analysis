@@ -14,7 +14,7 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
 ## downloading the app
 
 ### If you already have Matlab installed:
-Simply download this code (e.g. with Github Desktop) and add the folder to MATLAB's paths (from the MATLAB "HOME" tab: click on "Set Path", "Add with Subfolders", and select the folder where you downloaded this code). Then, open **deeplabcut_analysis.mlapp** to use the app.
+Simply download this code (e.g. with Github Desktop) and add the folder to MATLAB's paths (from the MATLAB "HOME" tab: click on "Set Path", "Add with Subfolders", select the folder where you downloaded this code, and click "Save"). Then, open **deeplabcut_analysis.mlapp** to use the app.
 
 ### If you don't have MATLAB installed and/or don't have a MATLAB license:
 First, download and install the free MATLAB runtime [here](https://www.mathworks.com/products/compiler/matlab-runtime.html) (**must use version 9.10, other versions aren't accepted**). Then, open **deeplabcut_analysis.exe** to use the app.
