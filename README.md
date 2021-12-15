@@ -21,7 +21,7 @@ First, download and install the free MATLAB runtime [here](https://www.mathworks
 
 &nbsp;
 
-## analyzing h5 files
+## using the app
 Before using this app, videos must first be processed through DeepLabCut using one of the networks listed at the top. The .h5 file that is output from DeepLabCut contains coordinates of all the tracked labels from the video, and that's what this app primarily uses to perform the analyses. When you start up the app and choose the type of analysis you want to perform from the dropdown box, click the "Add files" button and navigate to/select the .h5 file(s) you want to analyze. Click the "Analyze" button to process the selected files through the analysis script. **Note: for the "object interaction" analysis type, the original .avi video file needs to be in the same folder as the .h5 file you select, and have the same base filename (e.g. "video1.avi" and "video1DeepCut...h5" must be in the same folder)**
 
 &nbsp;
