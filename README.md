@@ -31,7 +31,7 @@ It is possible to train new networks and still use this app, but there are speci
 
 ### Requirements for the ymaze analysis type
 In the config.yaml file of a new DLC network, these are the names and labels that must be used verbatim:
->Task: YMaze
+>Task: YMaze &nbsp;
 >bodyparts:
 >- rightarm
 >- leftarm
@@ -43,7 +43,7 @@ In the config.yaml file of a new DLC network, these are the names and labels tha
 
 ### Requirements for the open field and object interaction analysis types
 In the config.yaml file of a new DLC network, this is the task name and labels that must be used verbatim:
->Task: BehaviorBox
+>Task: BehaviorBox &nbsp;
 >bodyparts:
 >- toprightcorner
 >- topleftcorner
