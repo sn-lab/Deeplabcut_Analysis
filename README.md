@@ -56,5 +56,7 @@ In the config.yaml file of a new DLC network, this is the task name and labels t
 >- nose
 >- tailbase
 
+&nbsp;
+
 ## what if my DeepLabCut network doesn't conform to the requirements listed above?
 For networks that are incompatible with the current analysis scripts of the app (e.g. if different bodyparts have to be labelled than the ones listed above), a new analysis script would have to be written and incorporated in various places in the app. Create a [new issue](https://github.com/sn-lab/Deeplabcut_Analysis/issues) to request a new analysis type, and we'll see what we can do.
