@@ -30,9 +30,9 @@ Before using this app, videos must first be processed through DeepLabCut using o
 It is possible to train new networks and still use this app, but there are specific requirements in order to make a new network that is still compatible with this app as is.
 
 ### Requirements for the ymaze analysis type
-In the config.yaml file of a new DLC network, these are the names and labels that must be used verbatim:
+In the config.yaml file of a new DLC network, these are the names and labels that must be used  (case sensitive):
 >Task: YMaze 
->&nbsp;
+>
 >bodyparts:
 >- rightarm
 >- leftarm
@@ -43,9 +43,9 @@ In the config.yaml file of a new DLC network, these are the names and labels tha
 >- tailbase
 
 ### Requirements for the open field and object interaction analysis types
-In the config.yaml file of a new DLC network, this is the task name and labels that must be used verbatim:
+In the config.yaml file of a new DLC network, this is the task name and labels that must be used (case sensitive):
 >Task: BehaviorBox 
->&nbsp;
+>
 >bodyparts:
 >- toprightcorner
 >- topleftcorner
