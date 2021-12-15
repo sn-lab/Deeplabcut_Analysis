@@ -13,6 +13,7 @@ function analyze_ymaze(h5_filename, param)
 %     down_fps = effective fps after rolling average performed to remove some tracking errors
 %     bodypart = bodypart to use for distance measurements (e.g. mouse-arm distance)
 %     arm_threshold = minimum distance (cm) down arm a mouse bodypart has to be to count as in that arm
+%     show_figure = whether to show (1) or close (0) the results figure when finished
 
 if nargin<2
     %set default parameters
@@ -20,11 +21,13 @@ if nargin<2
     down_fps = 10; %effective fps after rolling average performed to remove some tracking errors
     bodypart = 'head'; %bodypart to use for distance measurements (e.g. mouse-arm distance)
     arm_threshold = 8; %minimum distance (cm) down arm a mouse bodypart has to be to count as in that arm
+    show_figure = 1; %whether to show (1) or close (0) the results figure when finished
 else
     fps = param.fps;
     down_fps = param.down_fps;
     bodypart = param.bodypart;
     arm_threshold = param.arm_threshold;
+    show_figure = param.show_figure;
 end
 
 arm_length_in_meters = 0.365;
@@ -355,6 +358,9 @@ text(0,0.08,['Spontaneous alternation: ' num2str(spontaneous_alternation_percent
 
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
+if ~show_figure
+    close(gcf)
+end
 
 %write custom xls file of results
 C = cell(10,2);

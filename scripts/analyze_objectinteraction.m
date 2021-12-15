@@ -23,6 +23,7 @@ function analyze_objectinteraction(h5_filename,param)
 %     bodypart = bodypart to use for distance measurements (e.g. mouse-object distance)
 %     view_cone = viewing cone angle (i.e. horizontal FOV, in degrees) to consider an object inside the mouse's visual field
 %     close_threshold = minimum distance (cm) from mouse to object to count as interacting
+%     show_figure = whether to show (1) or close (0) the results figure when finished
 %     hue_weight = %the weight of hue (vs dark-luminance) in object detection
 %     bkgd_fraction = fraction of box background to use as "non-object pixels"
 %     zscore_threshold = z-score threshold to define object pixels
@@ -36,6 +37,7 @@ if nargin<2
     bodypart = 'head'; %bodypart to use for distance measurements (e.g. mouse-object distance)
     view_cone = 90; %viewing cone angle (i.e. horizontal FOV, in degrees) to consider an object inside the mouse's visual field
     close_threshold = 4; %minimum distance (cm) from mouse to object to count as interacting
+    show_figure = 1; %whether to show (1) or close (0) the results figure when finished
     hue_weight = 0.3; %the weight of hue (vs dark-luminance) in object detection
     bkgd_fraction = 0.85; %fraction of box background to use as "non-object pixels"
     zscore_threshold = 3; %z-score threshold to define object pixels
@@ -47,6 +49,7 @@ else
     bodypart = param.bodypart;
     view_cone = param.view_cone;
     close_threshold = param.close_threshold;
+    show_figure = param.show_figure;
     hue_weight = param.hue_weight;
     bkgd_fraction = param.bkgd_fraction;
     zscore_threshold = param.zscore_threshold;
@@ -644,6 +647,9 @@ text(0,0.10,['[' num2str(objects_ontopof_time, '%.1f  ') '] s,   [' num2str(obje
 
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
+if ~show_figure
+    close(gcf)
+end
 
 %write custom xls file of results
 C = cell(8,2);

@@ -13,6 +13,7 @@ function analyze_openfield(h5_filename, param)
 %     down_fps = effective fps after rolling average performed to remove some tracking errors
 %     bodypart = bodypart to use for distance measurements (e.g. mouse-wall distance)
 %     close_threshold = minimum distance (cm) from mouse bodypart to the wall to count as "near wall"
+%     show_figure = whether to show (1) or close (0) the results figure when finished
 
 if nargin<2
     %set default parameters
@@ -20,11 +21,13 @@ if nargin<2
     down_fps = 10; %effective fps after rolling average performed to remove some tracking errors
     bodypart = 'head'; %bodypart to use for distance measurements (e.g. mouse-wall distance)
     close_threshold = 10; %minimum distance (cm) from mouse bodypart to the wall to count as "near wall"
+    show_figure = 1; %whether to show (1) or close (0) the results figure when finished
 else
     fps = param.fps;
     down_fps = param.down_fps;
     bodypart = param.bodypart;
     close_threshold = param.close_threshold;
+    show_figure = param.show_figure;
 end
 
 box_length_in_meters = 0.4445;
@@ -378,6 +381,9 @@ text(0,0.25,['Distance travelled in center: ' num2str(distance_incenter, '%.1f')
 
 saveas(gcf,[output_filename '.png'])
 save([output_filename '.mat'],'results');
+if ~show_figure
+    close(gcf)
+end
 
 %write custom xls file of results
 C = cell(11,2);
