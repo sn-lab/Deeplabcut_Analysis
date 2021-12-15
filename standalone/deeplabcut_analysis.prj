@@ -1,9 +1,9 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration file="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\deeplabcut_analysis.prj" location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone" name="deeplabcut_analysis" preferred-package-location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="1257166633" file="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\deeplabcut_analysis.prj" location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone" name="deeplabcut_analysis" preferred-package-location="C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>deeplabcut_analysis</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.1</param.version>
+    <param.version>1.2</param.version>
     <param.authnamewatermark>Matthew Isaacson</param.authnamewatermark>
     <param.email>mdi22@cornell.edu</param.email>
     <param.company>Cornell University</param.company>
@@ -86,14 +86,14 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
     </fileset.resources>
     <fileset.package />
     <fileset.depfun>
-      <file>C:\Users\misaa\Documents\GitHub\CaImAn-MATLAB\utilities\cell2str.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_objectinteraction.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_openfield.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\scripts\analyze_ymaze.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\cell2str.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\get_angular_dist.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\get_dist.m</file>
+      <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\linspecer.m</file>
       <file>C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\support\rolling_average.m</file>
-      <file>C:\Users\misaa\Documents\GitHub\draw_ROIs\support\linspecer.m</file>
     </fileset.depfun>
     <build-deliverables>
       <file location="${PROJECT_ROOT}" name="splash.png" optional="false">C:\Users\misaa\Documents\GitHub\Deeplabcut_Analysis\standalone\splash.png</file>
