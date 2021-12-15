@@ -10,13 +10,13 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
 3. Object-recognition test to quantify mouse interactions to detected objects (for each .h5 file, the original .avi video file must be in the same path and have the same base filename -- see examples)
 
 
+
 ## getting started
-This .app can either be run on computers with MATLAB installed (using the .mlapp file) or on computers which don't (using the deeplabcut_analysis.exe file). 
 
 ### If you already have Matlab installed:
-Simply download this code (e.g. with Github Desktop) and add the folder to Matlab paths (from the Matlab "HOME" tab: click on "Set Path", then "Add with subfolders", then select the folder where you downloaded this code). Then, open *deeplabcut_analysis.mlapp* to use the app.
+Simply download this code (e.g. with Github Desktop) and add the folder to MATLAB's paths (from the MATLAB "HOME" tab: click on "Set Path", then "Add with subfolders", then select the folder where you downloaded this code). Then, open **deeplabcut_analysis.mlapp** to use the app.
 
 ### If you don't have MATLAB installed and/or don't have a MATLAB license:
-First, download and install the free MATLAB runtime here (**must use version 9.10**): [Install and Configure MATLAB Runtime - MATLAB & Simulink (mathworks.com)](https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html). Then, open *deeplabcut_analysis.exe* to use the app.
+First, download and install the free MATLAB runtime here (**must use version 9.10**): [Install and Configure MATLAB Runtime - MATLAB & Simulink (mathworks.com)](https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html). Then, open **deeplabcut_analysis.exe** to use the app.
 
 
