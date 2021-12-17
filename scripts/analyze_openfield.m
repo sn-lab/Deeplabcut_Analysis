@@ -387,10 +387,17 @@ incenter = (edge_dist/pixels_per_meter)>(close_threshold/100);
 
 time_closewall = sum(closewall,'omitnan')/fps;
 time_incenter = sum(incenter,'omitnan')/fps;
-steps = [0; get_dist(smooth_body_x(1:end-1),smooth_body_y(1:end-1),smooth_body_x(2:end),smooth_body_y(2:end))];
+
+%calculate distance travelled (first remove nans; i.e. bad tracking)
+nonan = ~isnan(smooth_body_x);
+nonan_sbx = smooth_body_x;
+nonan_sbx(~nonan) = [];
+nonan_sby = smooth_body_y;
+nonan_sby(~nonan) = [];
+steps = [0; get_dist(nonan_sbx(1:end-1),nonan_sby(1:end-1),nonan_sbx(2:end),nonan_sby(2:end))];
 distance_travelled = sum(abs(steps),'omitnan')/pixels_per_meter;
-distance_closewall = sum(abs(steps(closewall)),'omitnan')/pixels_per_meter;
-distance_incenter = sum(abs(steps(incenter)),'omitnan')/pixels_per_meter;
+distance_closewall = sum(abs(steps(closewall(nonan))),'omitnan')/pixels_per_meter;
+distance_incenter = sum(abs(steps(incenter(nonan))),'omitnan')/pixels_per_meter;
 total_time = num_frames/fps;
 
 results.number_of_frames = num_frames;

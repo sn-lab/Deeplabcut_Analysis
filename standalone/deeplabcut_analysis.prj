@@ -3,7 +3,7 @@
     <param.appname>deeplabcut_analysis</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.2</param.version>
+    <param.version>1.3</param.version>
     <param.authnamewatermark>Matthew Isaacson</param.authnamewatermark>
     <param.email>mdi22@cornell.edu</param.email>
     <param.company>Cornell University</param.company>
@@ -12,7 +12,7 @@
 
 A MATLAB app to analyze .h5 tracking files from videos processed through either the "YMaze" or "BehaviorBox" DeepLabCut trained networks (which can be downloaded here: https://cornell.box.com/s/wq6kjvpou3k9713ovjpwnh1ghhqiz0ww). More info on DeepLabCut is available here: https://deeplabcut.github.io/DeepLabCut/docs/intro.html
 
-This .app can either be run on computers with MATLAB installed (using the .mlapp file) or on computers which don't (using the .exe file). In order to use the .exe file on computers without MATLAB installed, first download and install the free MATLAB runtime here: https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html
+This .app can either be run on computers with MATLAB installed (using the .mlapp file) or on computers which don't (using the .exe file). In order to use the .exe file on computers without MATLAB installed, first download and install the free MATLAB runtime v9.10 here: https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html
 
 This app simply functions to load a list of .h5 files to analyze, checks their compatibility with the selected analysis type, and processes each file through the appropriate analysis script, according to the analysis parameters specified within the app. For each type of analysis, a specific script is used which loads the appropriate tracking labels, cleans up the dataset, and processes/plots the results in the desired way. These are the analysis types currently included in the app:
 
@@ -51,7 +51,19 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
 	 
  Input Arguments 
 	 -?  print help on how to use the application 
-	 input arguments</param.help.text>
+	 input arguments 
+ Description 
+ 	 # deeplabcut_analysis
+
+A MATLAB app to analyze .h5 tracking files from videos processed through either the "YMaze" or "BehaviorBox" DeepLabCut trained networks (which can be downloaded here: https://cornell.box.com/s/wq6kjvpou3k9713ovjpwnh1ghhqiz0ww). More info on DeepLabCut is available here: https://deeplabcut.github.io/DeepLabCut/docs/intro.html
+
+This .app can either be run on computers with MATLAB installed (using the .mlapp file) or on computers which don't (using the .exe file). In order to use the .exe file on computers without MATLAB installed, first download and install the free MATLAB runtime v9.10 here: https://www.mathworks.com/help/compiler/install-the-matlab-runtime.html
+
+This app simply functions to load a list of .h5 files to analyze, checks their compatibility with the selected analysis type, and processes each file through the appropriate analysis script, according to the analysis parameters specified within the app. For each type of analysis, a specific script is used which loads the appropriate tracking labels, cleans up the dataset, and processes/plots the results in the desired way. These are the analysis types currently included in the app:
+
+1. Y-maze test for spontaneous alternation
+2. Open-field test for anxiety-like behaviors (i.e. staying close to walls)
+3. Object-recognition test to quantify mouse interactions to detected objects (for each .h5 file, the original .avi video file must be in the same path and have the same base filename -- see examples)</param.help.text>
     <unset>
       <param.icon />
       <param.icons />

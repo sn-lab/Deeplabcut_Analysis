@@ -315,7 +315,12 @@ for i = 3:num_arm_entries
 end
 spontaneous_alternation_percent = 100*num_alternations/(num_arm_entries-2);
 
-steps = get_dist(smooth_body_x(1:end-1),smooth_body_y(1:end-1),smooth_body_x(2:end),smooth_body_y(2:end));
+%calculate distance travelled (first remove nans; i.e. bad tracking)
+nonan_sbx = smooth_body_x;
+nonan_sbx(isnan(nonan_sbx)) = [];
+nonan_sby = smooth_body_y;
+nonan_sby(isnan(nonan_sby)) = [];
+steps = get_dist(nonan_sbx(1:end-1),nonan_sby(1:end-1),nonan_sbx(2:end),nonan_sby(2:end));
 distance_travelled = sum(abs(steps),'omitnan')/pixels_per_meter;
 total_time = num_frames/fps;
 
