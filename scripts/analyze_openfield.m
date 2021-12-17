@@ -117,7 +117,49 @@ box_lengths(2) = get_dist(topleft_x,topleft_y,botleft_x,botleft_y);
 box_lengths(3) = get_dist(botleft_x,botleft_y,botright_x,botright_y);
 box_lengths(4) = get_dist(botright_x,botright_y,topright_x,topright_y);
 box_length_in_pixels = mean(box_lengths,'omitnan');
-assert(all((box_lengths./box_length_in_pixels)>0.95),'detected box is out of shape - tracking is probably too poor to continue')
+while any((box_lengths./box_length_in_pixels)<0.95 | (box_lengths./box_length_in_pixels)>1.05)
+    %find the worst angle and replace that corner
+    warning('box appears to be out of shape -- tracking quality may be poor')
+    coords = [corners_x' corners_y'];
+    corner_angles = nan(1,4);
+    for c = 1:4
+        c1 = coords(1+mod(c-2,4),:) - coords(c,:);
+        angle1 = atan2(c1(2),c1(1));
+        c2 = coords(1+mod(c,4),:) - coords(c,:);
+        angle2 = atan2(c2(2),c2(1));
+        corner_angles(c) = get_angular_dist(angle1,angle2,'radians');
+    end
+    [~,bad_corner] = max(abs(corner_angles-(pi/2)));
+    good_corners = 1+mod([bad_corner-1, bad_corner+1]-1,4);
+    diagonal_len = get_dist(corners_x(good_corners(1)),corners_y(good_corners(1)),corners_x(good_corners(2)),corners_y(good_corners(2)));
+    side_len = diagonal_len/sqrt(2);
+    diagonal_ang = atan2(diff(corners_y(good_corners)),diff(corners_x(good_corners)));
+    bad_ang = atan2(diff(corners_y([good_corners(1) bad_corner])),diff(corners_x([good_corners(1) bad_corner])));
+    ang_d = bad_ang-diagonal_ang;
+    if (ang_d>0 && ang_d<pi) || ang_d<-pi
+        new_ang = pi/4 + diagonal_ang;
+    else
+        new_ang = -pi/4 + diagonal_ang;
+    end
+    %calculate new corner from new angle and length
+    corners_x(bad_corner) = corners_x(good_corners(1)) + side_len*cos(new_ang);
+    corners_y(bad_corner) = corners_y(good_corners(1)) + side_len*sin(new_ang);
+    corners_x(5) = corners_x(1);
+    corners_y(5) = corners_y(1);
+    topright_x = corners_x(1);
+    topright_y = corners_y(1);
+    topleft_x = corners_x(2);
+    topleft_y = corners_y(2);
+    botleft_x = corners_x(3);
+    botleft_y = corners_y(3);
+    botright_x = corners_x(4);
+    botright_y = corners_y(4);
+    box_lengths(1) = get_dist(topright_x,topright_y,topleft_x,topleft_y);
+    box_lengths(2) = get_dist(topleft_x,topleft_y,botleft_x,botleft_y);
+    box_lengths(3) = get_dist(botleft_x,botleft_y,botright_x,botright_y);
+    box_lengths(4) = get_dist(botright_x,botright_y,topright_x,topright_y);
+    box_length_in_pixels = mean(box_lengths,'omitnan');
+end
 pixels_per_meter = box_length_in_pixels/box_length_in_meters;
 
 %draw box for validation
