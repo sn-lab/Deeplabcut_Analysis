@@ -74,34 +74,12 @@ ary = data.values_block_0';
 colnames = {'TR_x','TR_y','TR_l','TL_x','TL_y','TL_l','BL_x','BL_y','BL_l','BR_x','BR_y','BR_l','RE_x','RE_y','RE_l','LE_x','LE_y','LE_l','NO_x','NO_y','NO_l','TB_x','TB_y','TB_l'};
 [num_frames, num_cols] = size(ary);
 
-%load video subset (~100 frames) for object detection
+%load video information
 avi_filename = [output_filename '.avi'];
 assert(exist(avi_filename,'file')==2,['Cannot find avi file associated with the h5 file. ',...
     'Make sure the original video file is in the same folder as the h5 file, and shares',...
     ' the same filename before "DeepCut" (e.g. video1.avi and video1DeepCutAp....h5']);
 v = VideoReader(avi_filename);
-time_incr = v.Duration/100;
-sample_frame_times = 0:time_incr:v.Duration;
-sample_frames = nan([v.height, v.width, 3, length(sample_frame_times)]);
-switch v.VideoFormat
-    case 'Mono8'
-        scale_factor = 1/255;
-    case 'RGB24'
-        scale_factor = 1/255;
-    case 'RGB48'
-        scale_factor = 1/65535;
-    otherwise
-        scale_factor = 1/255;
-        warning('unexpected video format, object detection may not work');
-end
-for t = 1:length(sample_frame_times)
-    v.CurrentTime = sample_frame_times(t);
-    if hasFrame(v)
-        sample_frames(:,:,:,t) = readFrame(v);
-    end
-end
-sample_frames = flipud(sample_frames);
-median_frame = median(sample_frames,4,'omitnan')*scale_factor;
 
 %vertically flip all y values
 ystrings = repmat({'_y'},1,num_cols);
@@ -209,15 +187,6 @@ while any((box_lengths./box_length_in_pixels)<0.95 | (box_lengths./box_length_in
 end
 pixels_per_meter = box_length_in_pixels/box_length_in_meters;
 
-%draw box for validation
-figure('Units','centimeters','Position',figure_size);
-ax = subplot(2,4,1);
-image(median_frame);
-set(ax,'YDir','normal');
-xlim(xlimits);
-ylim(ylimits)
-title('median frame')
-
 %calculate some points along the box edge (for later, to track mice distance from edges)
 num_edgepts = round(box_length_in_pixels/10);
 
@@ -237,6 +206,182 @@ edgepts_y = [topright_y:topedge_ystep:topleft_y, topleft_y:leftedge_ystep:botlef
 side_ind = [1*ones(1, num_edgepts) 2*ones(1, num_edgepts) 3*ones(1, num_edgepts) 4*ones(1, num_edgepts)];
 num_edgepts = length(edgepts_x);
 
+%% delete all mouse tracking that's outside of the box (change to NaNs)
+leftear_x_ind = find(strcmp(colnames,'LE_x'));
+leftear_y_ind = find(strcmp(colnames,'LE_y'));
+rightear_x_ind = find(strcmp(colnames,'RE_x'));
+rightear_y_ind = find(strcmp(colnames,'RE_y'));
+nose_x_ind = find(strcmp(colnames,'NO_x'));
+nose_y_ind = find(strcmp(colnames,'NO_y'));
+tail_x_ind = find(strcmp(colnames,'TB_x'));
+tail_y_ind = find(strcmp(colnames,'TB_y'));
+
+full_edgepts_x = repmat(edgepts_x,[num_frames 1]);
+full_edgepts_y = repmat(edgepts_y,[num_frames 1]);
+
+nose_x = ary(:,nose_x_ind);
+nose_y = ary(:,nose_y_ind);
+edge_dists = get_dist(repmat(nose_x,[1 num_edgepts]),repmat(nose_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
+[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
+closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_sides = side_ind(closest_edgept_inds)';
+out_of_box_idx = false(size(nose_x));
+out_of_box_idx(closest_sides==1) = nose_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
+out_of_box_idx(closest_sides==2) = nose_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
+out_of_box_idx(closest_sides==3) = nose_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
+out_of_box_idx(closest_sides==4) = nose_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
+nose_x(out_of_box_idx) = nan;
+nose_y(out_of_box_idx) = nan;
+
+leftear_x = ary(:,leftear_x_ind);
+leftear_y = ary(:,leftear_y_ind);
+edge_dists = get_dist(repmat(leftear_x,[1 num_edgepts]),repmat(leftear_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
+[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
+closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_sides = side_ind(closest_edgept_inds)';
+out_of_box_idx = false(size(nose_x));
+out_of_box_idx(closest_sides==1) = leftear_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
+out_of_box_idx(closest_sides==2) = leftear_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
+out_of_box_idx(closest_sides==3) = leftear_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
+out_of_box_idx(closest_sides==4) = leftear_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
+leftear_x(out_of_box_idx) = nan;
+leftear_y(out_of_box_idx) = nan;
+
+rightear_x = ary(:,rightear_x_ind);
+rightear_y = ary(:,rightear_y_ind);
+edge_dists = get_dist(repmat(rightear_x,[1 num_edgepts]),repmat(rightear_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
+[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
+closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_sides = side_ind(closest_edgept_inds)';
+out_of_box_idx = false(size(nose_x));
+out_of_box_idx(closest_sides==1) = rightear_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
+out_of_box_idx(closest_sides==2) = rightear_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
+out_of_box_idx(closest_sides==3) = rightear_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
+out_of_box_idx(closest_sides==4) = rightear_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
+rightear_x(out_of_box_idx) = nan;
+rightear_y(out_of_box_idx) = nan;
+
+tail_x = ary(:,tail_x_ind);
+tail_y = ary(:,tail_y_ind);
+edge_dists = get_dist(repmat(tail_x,[1 num_edgepts]),repmat(tail_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
+[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
+closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
+closest_sides = side_ind(closest_edgept_inds)';
+out_of_box_idx = false(size(nose_x));
+out_of_box_idx(closest_sides==1) = tail_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
+out_of_box_idx(closest_sides==2) = tail_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
+out_of_box_idx(closest_sides==3) = tail_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
+out_of_box_idx(closest_sides==4) = tail_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
+tail_x(out_of_box_idx) = nan;
+tail_y(out_of_box_idx) = nan;
+
+%% delete all mouse tracking that's too far from the mouse's estimated position
+%estimate the mouse's size
+mouse_size_in_pixels = median(get_dist(nose_x,nose_y,tail_x,tail_y),'omitnan');
+
+%create time-smoothed bodypart estimates (downsampled to 5 Hz)
+verysmooth_fps = 5;
+head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
+head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
+smooth_tail_x = rolling_average(tail_x,1,round(fps/verysmooth_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/verysmooth_fps),'median');
+smooth_head_x = rolling_average(head_x,1,round(fps/verysmooth_fps),'median');
+smooth_head_y = rolling_average(head_y,1,round(fps/verysmooth_fps),'median');
+smooth_body_x = mean([smooth_head_x smooth_tail_x],2,'omitnan');
+smooth_body_y = mean([smooth_head_y smooth_tail_y],2,'omitnan');
+
+%find all mouse labels that are very far from the body center estimate, and nan them
+dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
+too_far_idx = dist_tmp>mouse_size_in_pixels*3;
+nose_x(too_far_idx) = nan;
+nose_y(too_far_idx) = nan;
+
+dist_tmp = get_dist(leftear_x,leftear_y,smooth_body_x,smooth_body_y);
+too_far_idx = dist_tmp>mouse_size_in_pixels*3;
+leftear_x(too_far_idx) = nan;
+leftear_y(too_far_idx) = nan;
+
+dist_tmp = get_dist(rightear_x,rightear_y,smooth_body_x,smooth_body_y);
+too_far_idx = dist_tmp>mouse_size_in_pixels*3;
+rightear_x(too_far_idx) = nan;
+rightear_y(too_far_idx) = nan;
+
+dist_tmp = get_dist(tail_x,tail_y,smooth_body_x,smooth_body_y);
+too_far_idx = dist_tmp>mouse_size_in_pixels*3;
+tail_x(too_far_idx) = nan;
+tail_y(too_far_idx) = nan;
+
+
+%% estimate the mouse's body position again (downsampled)
+smooth_tail_x = rolling_average(tail_x,1,round(fps/down_fps),'median');
+smooth_tail_y = rolling_average(tail_y,1,round(fps/down_fps),'median');
+smooth_nose_x = rolling_average(nose_x,1,round(fps/down_fps),'median');
+smooth_nose_y = rolling_average(nose_y,1,round(fps/down_fps),'median');
+smooth_rightear_x = rolling_average(rightear_x,1,round(fps/down_fps),'median');
+smooth_rightear_y = rolling_average(rightear_y,1,round(fps/down_fps),'median');
+smooth_leftear_x = rolling_average(leftear_x,1,round(fps/down_fps),'median');
+smooth_leftear_y = rolling_average(leftear_y,1,round(fps/down_fps),'median');
+smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
+smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
+smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
+smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
+
+%% calculate median frame (mouse excluded) for object detection
+%sample frames where the mouse was in different positions
+[~,xI] = sort(smooth_body_x);
+[~,yI] = sort(smooth_body_y);
+sample_frames_inds = [xI(ceil(0.02*v.NumFrames)), xI(floor(0.98*v.NumFrames)), yI(ceil(0.02*v.NumFrames)), yI(floor(0.98*v.NumFrames))];
+sample_frames_inds = unique(sample_frames_inds);
+sample_frames = nan([v.height, v.width, 3, length(sample_frames_inds)]);
+
+switch v.VideoFormat
+    case 'Mono8'
+        scale_factor = 1/255;
+    case 'RGB24'
+        scale_factor = 1/255;
+    case 'RGB48'
+        scale_factor = 1/65535;
+    otherwise
+        scale_factor = 1/255;
+        warning('unexpected video format, object detection may not work');
+end
+for i = 1:length(sample_frames_inds)
+    fidx = sample_frames_inds(i);
+    frame = double(read(v,fidx));
+    frame = flipud(frame);
+    %mask mouse location out of current frame
+    mouse_mask = false(size(frame));
+    mouse_mask(round(smooth_body_y(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_y(fidx)+(mouse_size_in_pixels/1.5)), round(smooth_body_x(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_x(fidx)+(mouse_size_in_pixels/1.5)), :) = true;
+    frame(mouse_mask) = nan;
+    sample_frames(:,:,:,i) = frame;
+end
+median_frame = median(sample_frames,4,'omitnan')*scale_factor;
+
+%% if the mouse mask covered any pixels for all frames, replace by background color
+if any(isnan(median_frame(:)))
+    %calculate the median hsv of the background
+    full_bkgd_mask = repmat(poly2mask(corners_x,corners_y,size(median_frame,1),size(median_frame,2)),[1 1 3]);
+    masked_median_frame = median_frame;
+    masked_median_frame(~full_bkgd_mask) = nan;
+    median_bkgd_rgb = median(median(masked_median_frame,1,'omitnan'),2,'omitnan');
+
+    nanidx = isnan(median_frame);
+    full_bkgd_rgb = repmat(median_bkgd_rgb,[v.Height,v.Width,1]);
+    median_frame(nanidx) = full_bkgd_rgb(nanidx);
+end
+
+%draw median frame and box for visual validation
+figure('Units','centimeters','Position',figure_size);
+ax = subplot(2,4,1);
+image(median_frame);
+set(ax,'YDir','normal');
+xlim(xlimits);
+ylim(ylimits)
+title('median frame')
 
 %% detect object locations (hue and dark-value method)
 %convert median frame to hsv (h and v may be most useful to find objects, since the background is hue-stable and not dark)
@@ -422,130 +567,6 @@ for o = 1:num_objects
     ylim(ylimits)
     title('detected walls and object locations');
 end
-
-%% delete all mouse tracking that's outside of the box (change to NaNs)
-leftear_x_ind = find(strcmp(colnames,'LE_x'));
-leftear_y_ind = find(strcmp(colnames,'LE_y'));
-rightear_x_ind = find(strcmp(colnames,'RE_x'));
-rightear_y_ind = find(strcmp(colnames,'RE_y'));
-nose_x_ind = find(strcmp(colnames,'NO_x'));
-nose_y_ind = find(strcmp(colnames,'NO_y'));
-tail_x_ind = find(strcmp(colnames,'TB_x'));
-tail_y_ind = find(strcmp(colnames,'TB_y'));
-
-full_edgepts_x = repmat(edgepts_x,[num_frames 1]);
-full_edgepts_y = repmat(edgepts_y,[num_frames 1]);
-
-nose_x = ary(:,nose_x_ind);
-nose_y = ary(:,nose_y_ind);
-edge_dists = get_dist(repmat(nose_x,[1 num_edgepts]),repmat(nose_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
-[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
-closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_sides = side_ind(closest_edgept_inds)';
-out_of_box_idx = false(size(nose_x));
-out_of_box_idx(closest_sides==1) = nose_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
-out_of_box_idx(closest_sides==2) = nose_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
-out_of_box_idx(closest_sides==3) = nose_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
-out_of_box_idx(closest_sides==4) = nose_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
-nose_x(out_of_box_idx) = nan;
-nose_y(out_of_box_idx) = nan;
-
-leftear_x = ary(:,leftear_x_ind);
-leftear_y = ary(:,leftear_y_ind);
-edge_dists = get_dist(repmat(leftear_x,[1 num_edgepts]),repmat(leftear_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
-[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
-closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_sides = side_ind(closest_edgept_inds)';
-out_of_box_idx = false(size(nose_x));
-out_of_box_idx(closest_sides==1) = leftear_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
-out_of_box_idx(closest_sides==2) = leftear_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
-out_of_box_idx(closest_sides==3) = leftear_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
-out_of_box_idx(closest_sides==4) = leftear_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
-leftear_x(out_of_box_idx) = nan;
-leftear_y(out_of_box_idx) = nan;
-
-rightear_x = ary(:,rightear_x_ind);
-rightear_y = ary(:,rightear_y_ind);
-edge_dists = get_dist(repmat(rightear_x,[1 num_edgepts]),repmat(rightear_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
-[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
-closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_sides = side_ind(closest_edgept_inds)';
-out_of_box_idx = false(size(nose_x));
-out_of_box_idx(closest_sides==1) = rightear_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
-out_of_box_idx(closest_sides==2) = rightear_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
-out_of_box_idx(closest_sides==3) = rightear_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
-out_of_box_idx(closest_sides==4) = rightear_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
-rightear_x(out_of_box_idx) = nan;
-rightear_y(out_of_box_idx) = nan;
-
-tail_x = ary(:,tail_x_ind);
-tail_y = ary(:,tail_y_ind);
-edge_dists = get_dist(repmat(tail_x,[1 num_edgepts]),repmat(tail_y,[1 num_edgepts]),full_edgepts_x,full_edgepts_y);
-[~, closest_edgept_inds] = min(edge_dists,[],2,'omitnan');
-closest_edgepts_x = full_edgepts_x(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_edgepts_y = full_edgepts_y(sub2ind(repmat([num_frames num_edgepts],[num_frames 1]),(1:num_frames)', closest_edgept_inds));
-closest_sides = side_ind(closest_edgept_inds)';
-out_of_box_idx = false(size(nose_x));
-out_of_box_idx(closest_sides==1) = tail_y(closest_sides==1)>closest_edgepts_y(closest_sides==1);
-out_of_box_idx(closest_sides==2) = tail_x(closest_sides==2)<closest_edgepts_x(closest_sides==2);
-out_of_box_idx(closest_sides==3) = tail_y(closest_sides==3)<closest_edgepts_y(closest_sides==3);
-out_of_box_idx(closest_sides==4) = tail_x(closest_sides==4)>closest_edgepts_x(closest_sides==4);
-tail_x(out_of_box_idx) = nan;
-tail_y(out_of_box_idx) = nan;
-
-%% delete all mouse tracking that's too far from the mouse's estimated position
-%estimate the mouse's size
-mouse_size_in_pixels = median(get_dist(nose_x,nose_y,tail_x,tail_y),'omitnan');
-
-%create time-smoothed bodypart estimates (downsampled to 5 Hz)
-verysmooth_fps = 5;
-head_x = median([nose_x leftear_x rightear_x],2,'omitnan');
-head_y = median([nose_y leftear_y rightear_y],2,'omitnan');
-smooth_tail_x = rolling_average(tail_x,1,round(fps/verysmooth_fps),'median');
-smooth_tail_y = rolling_average(tail_y,1,round(fps/verysmooth_fps),'median');
-smooth_head_x = rolling_average(head_x,1,round(fps/verysmooth_fps),'median');
-smooth_head_y = rolling_average(head_y,1,round(fps/verysmooth_fps),'median');
-smooth_body_x = mean([smooth_head_x smooth_tail_x],2,'omitnan');
-smooth_body_y = mean([smooth_head_y smooth_tail_y],2,'omitnan');
-
-%find all mouse labels that are very far from the body center estimate, and nan them
-dist_tmp = get_dist(nose_x,nose_y,smooth_body_x,smooth_body_y);
-too_far_idx = dist_tmp>mouse_size_in_pixels*3;
-nose_x(too_far_idx) = nan;
-nose_y(too_far_idx) = nan;
-
-dist_tmp = get_dist(leftear_x,leftear_y,smooth_body_x,smooth_body_y);
-too_far_idx = dist_tmp>mouse_size_in_pixels*3;
-leftear_x(too_far_idx) = nan;
-leftear_y(too_far_idx) = nan;
-
-dist_tmp = get_dist(rightear_x,rightear_y,smooth_body_x,smooth_body_y);
-too_far_idx = dist_tmp>mouse_size_in_pixels*3;
-rightear_x(too_far_idx) = nan;
-rightear_y(too_far_idx) = nan;
-
-dist_tmp = get_dist(tail_x,tail_y,smooth_body_x,smooth_body_y);
-too_far_idx = dist_tmp>mouse_size_in_pixels*3;
-tail_x(too_far_idx) = nan;
-tail_y(too_far_idx) = nan;
-
-
-%% estimate the mouse's body position again (downsampled)
-smooth_tail_x = rolling_average(tail_x,1,round(fps/down_fps),'median');
-smooth_tail_y = rolling_average(tail_y,1,round(fps/down_fps),'median');
-smooth_nose_x = rolling_average(nose_x,1,round(fps/down_fps),'median');
-smooth_nose_y = rolling_average(nose_y,1,round(fps/down_fps),'median');
-smooth_rightear_x = rolling_average(rightear_x,1,round(fps/down_fps),'median');
-smooth_rightear_y = rolling_average(rightear_y,1,round(fps/down_fps),'median');
-smooth_leftear_x = rolling_average(leftear_x,1,round(fps/down_fps),'median');
-smooth_leftear_y = rolling_average(leftear_y,1,round(fps/down_fps),'median');
-smooth_head_x = median([smooth_nose_x smooth_leftear_x smooth_rightear_x],2,'omitnan');
-smooth_head_y = median([smooth_nose_y smooth_leftear_y smooth_rightear_y],2,'omitnan');
-smooth_body_x =  mean([smooth_head_x smooth_tail_x],2,'omitnan');
-smooth_body_y =  mean([smooth_head_y smooth_tail_y],2,'omitnan');
 
 subplot(2,4,5)
 plot(corners_x,corners_y);
