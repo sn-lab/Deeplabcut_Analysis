@@ -8,6 +8,7 @@ This app simply functions to load a list of .h5 files to analyze, checks their c
 1. Y-maze test for spontaneous alternation
 2. Open-field test for anxiety-like behaviors (i.e. staying close to walls)
 3. Object-recognition test to quantify mouse interactions to detected objects (for each .h5 file, the original .avi video file must be in the same path and have the same base filename -- see examples)
+4. COMING SOON - Fixed-walking analysis to profile hindlimb motion and gait cycle properties in spine-fixed or tail-held mice walking on a treadmill
 
 &nbsp;
 
