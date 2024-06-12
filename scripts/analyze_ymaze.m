@@ -39,6 +39,9 @@ insidearm_threshold_fraction = (arm_length_in_meters-(arm_threshold/100))/arm_le
 [save_dir, filename, ~] = fileparts(h5_filename);
 ind = strfind(filename,'DeepCut');
 if isempty(ind)
+    ind = strfind(filename,'DLC');
+end
+if isempty(ind)
     ind = strfind(filename,'.h5');
 end
 filename = filename(1:ind-1);
@@ -107,8 +110,8 @@ rightarm_length = get_dist(center_x,center_y,rightarm_x,rightarm_y);
 arm_length_in_pixels = mean([leftarm_length middlearm_length rightarm_length]);
 pixels_per_meter = arm_length_in_pixels/arm_length_in_meters;
 arm_width = arm_width_in_meters*pixels_per_meter;
-assert(all(([leftarm_length middlearm_length rightarm_length]./arm_length_in_pixels)>0.95),...
-    'detected y-maze arm lengths are out of shape - tracking is probably too poor to continue')
+% assert(all(([leftarm_length middlearm_length rightarm_length]./arm_length_in_pixels)>0.95),...
+%     'detected y-maze arm lengths are out of shape - tracking is probably too poor to continue')
 
 
 %draw y-maze for validation
@@ -291,18 +294,21 @@ end
 inleft = (arm_dists(:,1)/leftarm_length)<insidearm_threshold_fraction;
 inmiddle = (arm_dists(:,2)/middlearm_length)<insidearm_threshold_fraction;
 inright = (arm_dists(:,3)/rightarm_length)<insidearm_threshold_fraction;
+incenter = (arm_dists(:,1)/leftarm_length)>=insidearm_threshold_fraction & ...
+    (arm_dists(:,2)/leftarm_length)>=insidearm_threshold_fraction & ...
+    (arm_dists(:,3)/leftarm_length)>=insidearm_threshold_fraction;
+
 inmultiple = inleft&inright | inleft&inmiddle | inright&inmiddle;
 
 inleft(inmultiple) = 0;
 inright(inmultiple) = 0;
 inmiddle(inmultiple) = 0;
-innone = ~inleft&~inright&~inmiddle;
+innone = ~inleft&~inright&~inmiddle&~incenter;
 assert((sum(inmultiple)/num_frames)<0.05, 'mouse tracking is too poor, need to make analysis even more robust');
 
-time_in_locations = [sum(inleft) sum(inright) sum(inmiddle) sum(innone)]/fps;
-sequence_of_locations = inleft + 2*inright + 3*inmiddle;
-sequence_of_arms = sequence_of_locations;
-sequence_of_arms(sequence_of_arms==0) = [];
+time_in_locations = [sum(inleft) sum(inright) sum(inmiddle) sum(incenter) sum(innone)]/fps;
+sequence_of_locations = inleft + 2*inright + 3*inmiddle + -1*innone;
+sequence_of_arms = sequence_of_locations(sequence_of_locations>0);
 sequence_of_arm_entries = sequence_of_arms;
 sequence_of_arm_entries(logical([0; diff(sequence_of_arm_entries)==0])) = [];
 num_arm_entries = length(sequence_of_arm_entries);

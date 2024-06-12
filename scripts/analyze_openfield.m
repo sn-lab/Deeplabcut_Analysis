@@ -37,6 +37,9 @@ figure_size = [10 10 25 10];
 [save_dir, filename, ~] = fileparts(h5_filename);
 ind = strfind(filename,'DeepCut');
 if isempty(ind)
+    ind = strfind(filename,'DLC');
+end
+if isempty(ind)
     ind = strfind(filename,'.h5');
 end
 filename = filename(1:ind-1);
@@ -411,6 +414,7 @@ results.time_close_to_wall = time_closewall;
 results.distance_travelled_close_to_wall = distance_closewall;
 results.time_in_center = time_incenter;
 results.distance_travelled_in_center = distance_incenter;
+results.sequence_of_near_wall = closewall;
 
 %print results to figure
 subplot(2,4,3)

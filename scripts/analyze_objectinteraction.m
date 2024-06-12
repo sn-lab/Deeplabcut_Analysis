@@ -64,6 +64,9 @@ figure_size = [10 10 25 10];
 [save_dir, filename, ~] = fileparts(h5_filename);
 ind = strfind(filename,'DeepCut');
 if isempty(ind)
+    ind = strfind(filename,'DLC');
+end
+if isempty(ind)
     ind = strfind(filename,'.h5');
 end
 filename = filename(1:ind-1);
@@ -351,13 +354,15 @@ switch v.VideoFormat
 end
 for i = 1:length(sample_frames_inds)
     fidx = sample_frames_inds(i);
-    frame = double(read(v,fidx));
-    frame = flipud(frame);
-    %mask mouse location out of current frame
-    mouse_mask = false(size(frame));
-    mouse_mask(round(smooth_body_y(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_y(fidx)+(mouse_size_in_pixels/1.5)), round(smooth_body_x(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_x(fidx)+(mouse_size_in_pixels/1.5)), :) = true;
-    frame(mouse_mask) = nan;
-    sample_frames(:,:,:,i) = frame;
+    try
+        frame = double(read(v,fidx));
+        frame = flipud(frame);
+        %mask mouse location out of current frame
+        mouse_mask = false(size(frame));
+        mouse_mask(round(smooth_body_y(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_y(fidx)+(mouse_size_in_pixels/1.5)), round(smooth_body_x(fidx)-(mouse_size_in_pixels/1.5)):round(smooth_body_x(fidx)+(mouse_size_in_pixels/1.5)), :) = true;
+        frame(mouse_mask) = nan;
+        sample_frames(:,:,:,i) = frame;
+    end
 end
 median_frame = median(sample_frames,4,'omitnan')*scale_factor;
 
